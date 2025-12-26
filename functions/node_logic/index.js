@@ -1,3 +1,9 @@
-const { askGemini } = require("./handlers");
+const { askGemini, getWaterPrediction } = require("./handlers");
 
-module.exports = { askGemini };
+module.exports = {
+  askGemini,
+  getWaterPrediction,
+};
+
+
+

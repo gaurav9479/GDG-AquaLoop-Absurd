@@ -1,3 +1,6 @@
+firebase-functions
 pandas
-numpy
+joblib
 scikit-learn
+numpy
+
