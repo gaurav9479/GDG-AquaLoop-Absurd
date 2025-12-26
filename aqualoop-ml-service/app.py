@@ -33,3 +33,5 @@ def predict(data: dict):
         "reuse_allowed": grade != "Unsafe",
         "applications": reuse_advice(grade)
     }
+
+
