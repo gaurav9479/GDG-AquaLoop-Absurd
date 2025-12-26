@@ -4,24 +4,24 @@ import numpy as np
 import joblib
 import os
 
-# -----------------------
-# App initialization
-# -----------------------
 app = FastAPI(title="AquaLoop ML Service")
 
 # -----------------------
-# CORS (IMPORTANT)
+# CORS
 # -----------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # React, Firebase, Netlify
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # -----------------------
-# Load ML model
+# Load model
+
+
+
 # -----------------------
 MODEL_PATH = os.path.join("model", "water_model.pkl")
 
@@ -38,67 +38,33 @@ def health():
     return {"status": "ML service running ✅"}
 
 # -----------------------
-# Prediction endpoint
+# Predict (A / B / C)
 # -----------------------
 @app.post("/predict")
 def predict(data: dict):
     try:
-        # Accept lowercase JSON keys (frontend standard)
-        def get(key):
-            return data.get(key) or data.get(key.capitalize())
-
-        required_fields = [
-            "ph",
-            "hardness",
-            "solids",
-            "chloramines",
-            "sulfate",
-            "conductivity",
-            "organic_carbon",
-            "trihalomethanes",
-            "turbidity"
-        ]
-
-        for field in required_fields:
-            if get(field) is None:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Missing field: {field}"
-                )
-
-        # Convert input to numpy array
-        features = np.array([[ 
-            float(get("ph")),
-            float(get("hardness")),
-            float(get("solids")),
-            float(get("chloramines")),
-            float(get("sulfate")),
-            float(get("conductivity")),
-            float(get("organic_carbon")),
-            float(get("trihalomethanes")),
-            float(get("turbidity"))
+        features = np.array([[
+            float(data["ph"]),
+            float(data["hardness"]),
+            float(data["solids"]),
+            float(data["chloramines"]),
+            float(data["sulfate"]),
+            float(data["conductivity"]),
+            float(data["organic_carbon"]),
+            float(data["trihalomethanes"]),
+            float(data["turbidity"]),
         ]])
 
-        # Predict
-        prediction = int(model.predict(features)[0])
+        # ✅ MODEL ALREADY RETURNS "A" / "B" / "C"
+        grade = str(model.predict(features)[0]).upper()
 
-        # Grade mapping
-        grade_map = {
-            0: "C",   # Unsafe
-            1: "B",   # Reusable
-            2: "A"    # Drinkable
-        }
-
-        grade = grade_map.get(prediction, "C")
         reuse_allowed = grade in ["A", "B"]
 
-        applications = (
-            ["Drinking", "Agriculture", "Gardening", "Construction"]
-            if grade == "A"
-            else ["Agriculture", "Gardening", "Construction"]
-            if grade == "B"
-            else ["Industrial use only"]
-        )
+        applications = {
+            "A": ["Drinking", "Agriculture", "Gardening", "Construction"],
+            "B": ["Agriculture", "Gardening", "Construction"],
+            "C": ["Industrial use only"]
+        }.get(grade, [])
 
         return {
             "predicted_grade": grade,
@@ -106,9 +72,8 @@ def predict(data: dict):
             "applications": applications
         }
 
-    except HTTPException:
-        raise
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Missing field: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
