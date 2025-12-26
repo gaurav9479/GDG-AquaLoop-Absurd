@@ -1,25 +1,42 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  /* Core Brand Colors */
+  --color-aqua-dark: #0b141a;
+  --color-aqua-surface: #15222b;
+  --color-aqua-border: #22343f;
+  
+  /* Accents */
+  --color-aqua-cyan: #00e5ff;
+  --color-aqua-teal: #008b9a;
+  --color-aqua-warning: #f59e0b;
+  --color-aqua-success: #10b981;
+  
+  /* Effects */
+  --shadow-glow-cyan: 0 0 15px rgba(0, 229, 255, 0.3);
+}
 
 @layer base {
-    body {
-        @apply bg-aqua-dark text-slate-200 antialiased;
-        background-image: radial-gradient(circle at 50% -20%, #152b36 0%, #0b141a 80%);
-        min-height: 100vh;
-    }
+  body {
+    /* Use the variables defined above */
+    @apply bg-aqua-dark text-slate-200 antialiased;
+    background-image: radial-gradient(circle at 50% -20%, #152b36 0%, #0b141a 80%);
+    min-height: 100vh;
+  }
 }
 
 @layer components {
-    .aqua-card {
-        @apply bg-aqua-surface/60 backdrop-blur-md border border-aqua-border rounded-2xl p-6;
-    }
+  .aqua-card {
+    /* Glassmorphism setup */
+    @apply bg-aqua-surface/60 backdrop-blur-md border border-aqua-border rounded-2xl p-6 transition-all duration-300;
+  }
 
-    .btn-primary {
-        @apply bg-aqua-cyan text-aqua-dark font-bold py-2 px-6 rounded-lg hover:shadow-glow-cyan transition-all duration-300;
-    }
+  .btn-primary {
+    @apply bg-aqua-cyan text-aqua-dark font-bold py-2 px-6 rounded-lg transition-all duration-300;
+    box-shadow: var(--shadow-glow-cyan);
+  }
 
-    .aqua-input {
-        @apply bg-aqua-dark border border-aqua-border rounded-lg p-3 focus:border-aqua-cyan focus:outline-none focus:ring-1 focus:ring-aqua-cyan;
-    }
+  .aqua-input {
+    @apply bg-aqua-dark border border-aqua-border rounded-lg p-3 focus:border-aqua-cyan focus:outline-none focus:ring-1 focus:ring-aqua-cyan;
+  }
 }
