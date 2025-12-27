@@ -1,7 +1,9 @@
-export default function Trends() {
+import React from 'react'
+
+function Trends() {
   return (
-    <div style={{ padding: "40px", fontSize: "24px" }}>
-      📈 Trends Page Loaded
-    </div>
-  );
+    <div>Trends</div>
+  )
 }
+
+export default Trends

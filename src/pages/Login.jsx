@@ -198,3 +198,5 @@ function GoogleIcon() {
     </svg>
   );
 }
+
+export default Login

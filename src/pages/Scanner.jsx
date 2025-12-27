@@ -1,7 +1,9 @@
-export default function Scanner() {
+import React from 'react'
+
+function Scanner() {
   return (
-    <div style={{ padding: "40px", fontSize: "24px" }}>
-      📷 Scanner Page Loaded
-    </div>
-  );
+    <div>Scanner</div>
+  )
 }
+
+export default Scanner

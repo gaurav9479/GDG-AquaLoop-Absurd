@@ -4,6 +4,7 @@ import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import Scanner from "./pages/Scanner";
 import Trends from "./pages/Trends";
+import MainLayout from "./layout/MainLayout.jsx";
 
 export default function App() {
   return (
