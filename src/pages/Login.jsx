@@ -199,4 +199,3 @@ function GoogleIcon() {
   );
 }
 
-export default Login
