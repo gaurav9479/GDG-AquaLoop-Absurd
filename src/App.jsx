@@ -1,10 +1,5 @@
-import { Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import Dashboard from "./pages/Dashboard";
-import Scanner from "./pages/Scanner";
-import Trends from "./pages/Trends";
-import MainLayout from "./layout/MainLayout.jsx";
+import { Routes, Route, Navigate } from "react-router-dom";
+import Predictor from "./pages/Predictor";
 
 export default function App() {
   return (
@@ -30,5 +25,11 @@ export default function App() {
       </div>
 
     </div>
+    <Routes>
+      <Route path="/" element={<Predictor />} />
+      <Route path="/predict" element={<Predictor />} />
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
   );
 }
+

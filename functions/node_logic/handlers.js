@@ -18,7 +18,7 @@ const askGemini = async (req, res) => {
 const getWaterPrediction = async (req, res) => {
   try {
     const response = await axios.post(
-      "https://<YOUR-PYTHON-FUNCTION-URL>",
+       "https://aqualoop-ml-service.onrender.com/predict",
       req.body
     );
 
