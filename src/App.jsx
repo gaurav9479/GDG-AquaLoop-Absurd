@@ -1,5 +1,11 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import Predictor from "./pages/Predictor";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Dashboard from "./pages/Dashboard";
+import Scanner from "./pages/Scanner";
+import Trends from "./pages/Trends";
+import MainLayout from "./layout/MainLayout";
 
 export default function App() {
   return (
@@ -12,7 +18,8 @@ export default function App() {
       {/* App Pages */}
       <div className="relative z-10">
         <Routes>
-
+          <Route path="/" element={<Predictor />} />
+          <Route path="/predict" element={<Predictor />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route element={<MainLayout />}>
@@ -20,16 +27,11 @@ export default function App() {
             <Route path="/scanner" element={<Scanner />} />
             <Route path="/trends" element={<Trends />} />
           </Route>
-          <Route path="*" element={<Login />} />
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </div>
 
     </div>
-    <Routes>
-      <Route path="/" element={<Predictor />} />
-      <Route path="/predict" element={<Predictor />} />
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
   );
 }
 
