@@ -18,7 +18,7 @@ export default function App() {
       {/* App Pages */}
       <div className="relative z-10">
         <Routes>
-          <Route path="/" element={<Predictor />} />
+          {/* <Route path="/" element={<Predictor />} /> */}
           <Route path="/predict" element={<Predictor />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />

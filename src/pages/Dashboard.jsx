@@ -7,7 +7,7 @@ const DashBoard=()=>{
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
                     <h1 className=" text-aqua-cyan text-xs font-black tracking-[0.4em] uppercase">
-                        Core Matrics
+                        Core Metrics
                     </h1>
                     <h2 className="text-3xl font-bold text-white mt-1">
                         Water Sample Analysis
