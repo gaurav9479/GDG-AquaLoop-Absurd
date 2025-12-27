@@ -3,6 +3,28 @@ import Predictor from "./pages/Predictor";
 
 export default function App() {
   return (
+    <div className="min-h-screen bg-black relative overflow-hidden">
+      
+      {/* Glow Effects */}
+      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-blue-500/30 rounded-full blur-[120px]" />
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-emerald-500/25 rounded-full blur-[120px]" />
+
+      {/* App Pages */}
+      <div className="relative z-10">
+        <Routes>
+
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route element={<MainLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/scanner" element={<Scanner />} />
+            <Route path="/trends" element={<Trends />} />
+          </Route>
+          <Route path="*" element={<Login />} />
+        </Routes>
+      </div>
+
+    </div>
     <Routes>
       <Route path="/" element={<Predictor />} />
       <Route path="/predict" element={<Predictor />} />
