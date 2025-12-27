@@ -54,6 +54,7 @@ def predict(data: dict):
             float(data["trihalomethanes"]),
             float(data["turbidity"]),
         ]])
+           
 
         # ✅ MODEL ALREADY RETURNS "A" / "B" / "C"
         grade = str(model.predict(features)[0]).upper()
