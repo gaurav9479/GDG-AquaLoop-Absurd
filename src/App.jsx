@@ -17,11 +17,14 @@ export default function App() {
       {/* App Pages */}
       <div className="relative z-10">
         <Routes>
+
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/scanner" element={<Scanner />} />
-          <Route path="/trends" element={<Trends />} />
+          <Route element={<MainLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/scanner" element={<Scanner />} />
+            <Route path="/trends" element={<Trends />} />
+          </Route>
           <Route path="*" element={<Login />} />
         </Routes>
       </div>
