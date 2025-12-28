@@ -6,6 +6,7 @@ export default function Navbar() {
       <Link to="/dashboard">Dashboard</Link>
       <Link to="/scanner">Scanner</Link>
       <Link to="/trends">Trends</Link>
+      <Link to="/predict">Predict</Link>
     </nav>
   );
 }

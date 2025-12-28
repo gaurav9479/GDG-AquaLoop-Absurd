@@ -19,13 +19,14 @@ export default function App() {
       <div className="relative z-10">
         <Routes>
           {/* <Route path="/" element={<Predictor />} /> */}
-          <Route path="/predict" element={<Predictor />} />
+          
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route element={<MainLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/scanner" element={<Scanner />} />
             <Route path="/trends" element={<Trends />} />
+            <Route path="/predict" element={<Predictor />} />
           </Route>
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

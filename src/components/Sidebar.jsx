@@ -3,6 +3,7 @@ import {
   LayoutDashboard, 
   ScanLine, 
   BarChart3, 
+  Brain,
   Settings, 
   LogOut 
 } from "lucide-react";
@@ -38,6 +39,7 @@ export default function Sidebar() {
         <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
         <NavItem to="/scanner" icon={ScanLine} label="Scanner" />
         <NavItem to="/trends" icon={BarChart3} label="Analytics" />
+         <NavItem to="/predict" icon={Brain} label="Predict" /> 
       </nav>
 
       {/* Footer / User Section */}
