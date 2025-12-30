@@ -24,7 +24,7 @@ export const KPICard=({title,value,statusColor,icon,children})=>{
                     </div>
                 </div>
                 <div className="mt-4">
-                    <h2>
+                    <h2 className="text-green-400">
                         {value}
                     </h2>
                     <div className="mt-2 flex items-center gap-2">

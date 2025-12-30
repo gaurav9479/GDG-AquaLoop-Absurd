@@ -54,7 +54,7 @@ export default function Signup() {
       setMsg("Account created! Please check your email to verify.");
       setLoading(false);
 
-      Promise.allSettled([
+      await Promise.allSettled([
         sendEmailVerification(res.user),
         saveUser(res.user, "password"),
       ]);
