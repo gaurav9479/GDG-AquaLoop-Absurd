@@ -20,9 +20,10 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (user) navigate("/dashboard", { replace: true });
-  }, [user, navigate]);
+ useEffect(() => {
+  if (user) navigate("/dashboard", { replace: true });
+}, [user, navigate]);
+
 
   const handleLogin = async () => {
     if (loading) return;

@@ -1,85 +1,50 @@
 import React from "react";
 import { KPICard } from "../layout/KpiCard";
-import { Activity, ShieldCheck, CheckCircle2, Droplets, Navigation, TrendingUp, Cpu } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import {Activity, ShieldCheck, CheckCircle2, Droplets, Navigation} from "lucide-react"
 
-const trendData = [
-  { time: '00:00', actual: 420, predicted: 420 },
-  { time: '04:00', actual: 380, predicted: 375 },
-  { time: '08:00', actual: 310, predicted: 305 },
-  { time: '12:00', actual: 200, predicted: 190 },
-  { time: '16:00', actual: null, predicted: 110 },
-  { time: '20:00', actual: null, predicted: 45 },
-];
 
-const DashBoard = () => {
-  return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 p-4">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-aqua-cyan text-xs font-black tracking-[0.4em] uppercase opacity-90">
-            Core Metrics Analysis
-          </h1>
-          <h2 className="text-3xl font-bold text-white mt-1">
-            Water Quality Real-time
-          </h2>
-        </div>
-        
-        {/* Visibility Fix: Brighter text for AI Trust Score */}
-        <div className="bg-aqua-surface/40 border border-aqua-border/60 px-5 py-3 rounded-2xl backdrop-blur-md flex items-center gap-3 shadow-lg shadow-black/20">
-          <div className="p-2 bg-aqua-success/20 rounded-lg border border-aqua-success/30">
-            <ShieldCheck className="text-aqua-success" size={20} />
-          </div>
-          <div>
-            <p className="text-[10px] text-slate-300 font-bold tracking-widest uppercase mb-0.5">AI Trust Score</p>
-            <p className="text-aqua-success text-base font-bold tracking-tight leading-none">98.2% Accuracy</p>
-          </div>
-        </div>
-      </div>
-
-      {/* KPI Ribbon */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
-        <KPICard title="Quality Score" value="84" statusColor="excellent" icon={<Activity size={18}/>}>
-          <div className="flex items-center gap-1.5 mt-1">
-            <span className="h-2 w-2 rounded-full bg-aqua-success animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"/>
-            <p className="text-aqua-success text-[11px] font-bold tracking-widest uppercase">Excellent</p>
-          </div>
-        </KPICard>
-
-        <KPICard title="Classification" value="Grade A" icon={<ShieldCheck size={18}/>}>
-          <span className="bg-aqua-cyan/15 text-white px-2.5 py-1 rounded-md text-[10px] border border-aqua-cyan/40 font-bold uppercase mt-2 inline-block">
-            Premium Reuse
-          </span>
-        </KPICard>
-
-        <KPICard title="Safe for Reuse" value="YES" statusColor="excellent" icon={<CheckCircle2 size={18}/>}>
-          <p className="text-slate-300 text-[10px] font-medium leading-none mt-2 opacity-80">
-            Certified: ISO-14001
-          </p>
-        </KPICard>
-
-        <KPICard title="Total Volume" value="5,400" icon={<Droplets size={18}/>}>
-          <span className="text-aqua-cyan/70 text-[10px] font-black tracking-widest uppercase mt-2 inline-block">
-            LITERS
-          </span>
-        </KPICard>
-
-        <KPICard title="Recommended" value="Agri" icon={<Navigation size={18}/>}>
-          <p className="text-white text-[11px] font-semibold italic mt-2 opacity-90 border-l-2 border-aqua-cyan/50 pl-2">
-            Optimal for irrigation
-          </p>
-        </KPICard>
-      </div>
-
-      {/* Analytics Panels */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Metric Trends */}
-        <div className="bg-aqua-surface/30 border border-aqua-border rounded-3xl p-7 h-80 relative overflow-hidden group hover:border-aqua-cyan/30 transition-all">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <TrendingUp className="text-aqua-cyan" size={18} />
-              <h3 className="text-white text-sm font-bold uppercase tracking-wider">Predictive BOD Decay</h3>
+const DashBoard=()=>{
+    return(
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h1 className=" text-aqua-cyan text-xs font-black tracking-[0.4em] uppercase">
+                        Core Metrics
+                    </h1>
+                    <h2 className="text-3xl font-bold text-white mt-1">
+                        Water Sample Analysis
+                    </h2>
+                </div>
+                <div className="bg-aqua-surface/40 border border-aqua-border px-4 py-2 rounded-xl backdrop-blur-sm">
+                    <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">AI Trust Score</p>
+                    <p className="text-aqua-success text-sm font-bold tracking-tighter">98.2% Accuracy</p>
+                </div>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                <KPICard title="Quality Score" value="84" statusColor="excellent" icon= {<Activity size={18}/>} >
+                    <div className="flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-aqua-success animate-pulse"/>
+                        <p className="text-aqua-success text-[10px] font-bold tracking-widest uppercase">Excellent</p>
+                    </div>
+                </KPICard>
+                <KPICard title="Classification" value="Grade A" icon={<ShieldCheck size={18}/>} >
+                    <span className="bg-aqua-teal/20 text-aqua-cyan px-2 py-0.5 rounded-md text-[9px] border border-aqua-cyan/30 font-black uppercase">
+                        Premium Reuse
+                    </span>
+                </KPICard>
+                <KPICard title="Safe for Reuse" value="YES" statusColor="excellent" icon={<CheckCircle2 size={18}/>}>
+                    <p className="text-slate-500 text-[9px] font-medium tracking-tight leading-none">
+                        Compliant with ISO standards
+                    </p>
+                </KPICard>
+                <KPICard title="Total Volume" value="5,400" icon={<Droplets size={18}/>}>
+                    <span className="text-slate-500 text-[10px] font-bold tracking-widest">LITERS</span>
+                </KPICard>
+                <KPICard title="Recommended" value="Agri" icon={<Navigation size={18}/>}>
+                    <p className="text-aqua-cyan/80 text-[10px] italic leading-tight">
+                        Best for crop irrigation
+                    </p>
+                </KPICard>
             </div>
             <span className="text-[10px] text-slate-200 font-bold bg-aqua-dark/80 px-3 py-1.5 rounded-lg border border-aqua-border">
               STAGE: TERTIARY
