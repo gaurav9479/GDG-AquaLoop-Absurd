@@ -17,18 +17,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# -----------------------
+
 # Load model
 
 
 
 # -----------------------
 MODEL_PATH = os.path.join("model", "water_model.pkl")
+TREATMENT_MODEL_PATH = os.path.join("model", "treatment_model.pkl")
 
 try:
     model = joblib.load(MODEL_PATH)
 except Exception as e:
     raise RuntimeError(f"Model load failed: {e}")
+
+
+try:
+    treatment_model = joblib.load(TREATMENT_MODEL_PATH)
+except Exception as e:
+    raise RuntimeError(f"Treatment model load failed: {e}")
 
 # -----------------------
 # Health check
@@ -77,4 +84,48 @@ def predict(data: dict):
         raise HTTPException(status_code=400, detail=f"Missing field: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+
+
+@app.post("/treatment/predict-stage")
+def predict_treatment_stage(data: dict):
+    try:
+        features = [[
+            float(data["bod"]),
+            float(data["cod"]),
+            float(data["ph"]),
+            float(data["turbidity"]),
+            float(data["tss"]),
+            data["industry_type"],
+            data["treatment_stage"]
+        ]]
+
+        import pandas as pd
+        df = pd.DataFrame(
+            features,
+            columns=[
+                "bod", "cod", "ph",
+                "turbidity", "tss",
+                "industry_type", "treatment_stage"
+            ]
+        )
+
+        prediction = treatment_model.predict(df)[0]
+
+        return {
+            "bod": round(float(prediction[0]), 2),
+            "cod": round(float(prediction[1]), 2),
+            "ph": round(float(prediction[2]), 2),
+            "turbidity": round(float(prediction[3]), 2),
+            "tss": round(float(prediction[4]), 2),
+        }
+
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Missing field: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
