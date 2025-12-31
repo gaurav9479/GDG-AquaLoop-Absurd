@@ -3,6 +3,7 @@ import Sidebar from "../components/Sidebar";
 import { useEffect, useState } from "react";
 import { doc,getDoc} from "firebase/firestore";
 import { auth,db } from "../services/firebase";
+import Footer from "../components/Footer";
 export default function MainLayout() {
   const[Username,setUsername]=useState("")
   const[IndustryNode,setIndustryNode]=useState("")
@@ -51,6 +52,9 @@ export default function MainLayout() {
 
         <div className="p-6 lg:p-10">
           <Outlet />
+        </div>
+        <div>
+          <Footer/>
         </div>
       </main>
     </div>
