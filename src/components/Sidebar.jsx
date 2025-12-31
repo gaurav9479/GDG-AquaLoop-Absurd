@@ -23,15 +23,18 @@ const NavItem = ({ to, icon: Icon, label }) => (
   </NavLink>
 );
 
-export default function Sidebar() {
+export default function Sidebar({ onLogout }) {
   return (
     <aside className="w-64 h-screen bg-aqua-dark border-r border-aqua-border flex flex-col p-6 sticky top-0">
+      
       {/* Logo Section */}
       <div className="flex items-center gap-3 mb-10 px-2">
         <div className="h-8 w-8 bg-aqua-cyan rounded-lg flex items-center justify-center shadow-glow-cyan">
           <div className="h-4 w-4 border-2 border-aqua-dark rounded-full border-t-transparent animate-spin-slow" />
         </div>
-        <span className="text-white font-black tracking-tighter text-xl italic">AQUALOOP</span>
+        <span className="text-white font-black tracking-tighter text-xl italic">
+          AQUALOOP
+        </span>
       </div>
 
       {/* Navigation Links */}
@@ -39,13 +42,18 @@ export default function Sidebar() {
         <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
         <NavItem to="/scanner" icon={ScanLine} label="Scanner" />
         <NavItem to="/trends" icon={BarChart3} label="Analytics" />
-         <NavItem to="/predict" icon={Brain} label="Predict" /> 
+        <NavItem to="/predict" icon={Brain} label="Predict" />
       </nav>
 
       {/* Footer / User Section */}
       <div className="pt-6 border-t border-aqua-border space-y-4">
         <NavItem to="/settings" icon={Settings} label="Settings" />
-        <button className="flex items-center gap-3 px-4 py-3 w-full text-red-400 hover:bg-red-500/10 rounded-xl transition-all">
+
+        {/* 🔴 WORKING SIGN OUT */}
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-3 px-4 py-3 w-full text-red-400 hover:bg-red-500/10 rounded-xl transition-all"
+        >
           <LogOut size={20} />
           <span className="text-sm font-semibold">Sign Out</span>
         </button>

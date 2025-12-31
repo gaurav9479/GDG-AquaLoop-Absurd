@@ -87,8 +87,11 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../services/firebase";
 
-// ✅ NEVER null
-const AuthContext = createContext({ user: null, logout: () => {} });
+const AuthContext = createContext({
+  user: null,
+  loading: true,
+  logout: () => {},
+});
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -102,16 +105,14 @@ export function AuthProvider({ children }) {
     return unsub;
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-white">
-        Initializing authentication...
-      </div>
-    );
-  }
-
   return (
-    <AuthContext.Provider value={{ user, logout: () => signOut(auth) }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        logout: () => signOut(auth),
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
