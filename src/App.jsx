@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Scanner from "./pages/Scanner";
 import Trends from "./pages/Trends";
 import MainLayout from "./layout/MainLayout";
+import TreatmentSimulation from "./pages/TreatmentSimulation";
 
 export default function App() {
   return (
@@ -27,6 +28,8 @@ export default function App() {
             <Route path="/scanner" element={<Scanner />} />
             <Route path="/trends" element={<Trends />} />
             <Route path="/predict" element={<Predictor />} />
+            <Route path="/predict-stage" element={<TreatmentSimulation />} />
+
           </Route>
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
