@@ -3,7 +3,8 @@ import Sidebar from "../components/Sidebar";
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../services/firebase";
+import { auth,db } from "../services/firebase";
+import Footer from "../components/Footer";
 
 export default function MainLayout() {
   const navigate = useNavigate();
@@ -11,6 +12,31 @@ export default function MainLayout() {
   const { logout, user } = useAuth();
   const [industry, setIndustry] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const[Username,setUsername]=useState("")
+  const[IndustryNode,setIndustryNode]=useState("")
+    useEffect(() => {
+      const fetchUser = async () => {
+      const currentUser = auth.currentUser;
+
+
+      if (!currentUser) return;
+
+      const userRef = doc(db, "users", currentUser.uid);
+      const snap = await getDoc(userRef);
+
+      if (snap.exists()) {
+        const data = snap.data();
+
+
+        setUsername(data.email);       
+        setIndustryNode(data.role);    
+      }
+    };
+
+    fetchUser();
+  }, []);
+  return (
+    <div className="flex min-h-screen bg-aqua-dark overflow-hidden">
 
   const handleLogout = async () => {
     await logout();
@@ -88,6 +114,9 @@ export default function MainLayout() {
         {/* PAGE CONTENT */}
         <div className="p-6 lg:p-10">
           <Outlet />
+        </div>
+        <div>
+          <Footer/>
         </div>
       </main>
     </div>

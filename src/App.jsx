@@ -8,6 +8,7 @@ import Trends from "./pages/Trends";
 import MainLayout from "./layout/MainLayout";
 import AuthMiddleware from "./middleware/AuthMiddleware";
 import IndustryProfileForm from "./pages/IndustryProfileForm";
+import TreatmentSimulation from "./pages/TreatmentSimulation";
 
 export default function App() {
   return (
