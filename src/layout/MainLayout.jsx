@@ -1,47 +1,38 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import Footer from "../components/Footer";
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
-import { auth,db } from "../services/firebase";
-import Footer from "../components/Footer";
+import { auth, db } from "../services/firebase";
 
 export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuth();
+
   const [industry, setIndustry] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
-  const[Username,setUsername]=useState("")
-  const[IndustryNode,setIndustryNode]=useState("")
-    useEffect(() => {
-      const fetchUser = async () => {
+
+  const [username, setUsername] = useState("");
+  const [industryNode, setIndustryNode] = useState("");
+
+  /* 🔹 Fetch basic user data */
+  useEffect(() => {
+    const fetchUser = async () => {
       const currentUser = auth.currentUser;
-
-
       if (!currentUser) return;
 
-      const userRef = doc(db, "users", currentUser.uid);
-      const snap = await getDoc(userRef);
-
+      const snap = await getDoc(doc(db, "users", currentUser.uid));
       if (snap.exists()) {
         const data = snap.data();
-
-
-        setUsername(data.email);       
-        setIndustryNode(data.role);    
+        setUsername(data.email);
+        setIndustryNode(data.role);
       }
     };
 
     fetchUser();
   }, []);
-  return (
-    <div className="flex min-h-screen bg-aqua-dark overflow-hidden">
-
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login", { replace: true });
-  };
 
   /* 🔐 Load Industry Profile */
   useEffect(() => {
@@ -55,7 +46,7 @@ export default function MainLayout() {
         const data = snap.data();
         setIndustry(data);
 
-        // 🚨 Force FIRST-TIME users only
+        // 🚨 Force FIRST-TIME industry users
         if (
           data.role === "industry" &&
           !data.profileCompleted &&
@@ -71,7 +62,13 @@ export default function MainLayout() {
     loadProfile();
   }, [user?.uid, navigate, location.pathname]);
 
-  // ⏳ Prevent UI flicker before profile loads
+  /* 🔓 Logout */
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login", { replace: true });
+  };
+
+  // ⏳ Prevent UI flicker
   if (loadingProfile) return null;
 
   return (
@@ -85,12 +82,12 @@ export default function MainLayout() {
             AQUALOOP AI
           </span>
 
-          {/* 🔹 EDIT PROFILE NODE */}
+          {/* INDUSTRY NODE */}
           <div
             role="button"
             title="Edit Industry Profile"
             onClick={() => navigate("/industry/profile")}
-            className="relative z-50 flex items-center gap-3 cursor-pointer
+            className="flex items-center gap-3 cursor-pointer
                        bg-aqua-surface/40 border border-aqua-border
                        px-3 py-2 rounded-xl backdrop-blur-sm
                        hover:bg-aqua-surface/60 transition"
@@ -105,19 +102,19 @@ export default function MainLayout() {
                 Industry Node
               </p>
               <p className="text-white text-xs font-medium">
-                {industry?.industryInfo?.name || "Industry"}
+                {industry?.industryInfo?.name || industryNode || "Industry"}
               </p>
             </div>
           </div>
         </nav>
 
         {/* PAGE CONTENT */}
-        <div className="p-6 lg:p-10">
+        <div className="p-6 lg:p-10 flex-1">
           <Outlet />
         </div>
-        <div>
-          <Footer/>
-        </div>
+
+        {/* FOOTER */}
+        <Footer />
       </main>
     </div>
   );

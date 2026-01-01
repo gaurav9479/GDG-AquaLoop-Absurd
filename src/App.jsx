@@ -25,9 +25,9 @@ export default function App() {
           <Route path="/signup" element={<Signup />} />
 
           {/* 🔐 Protected Routes */}
-          <Route element={<AuthMiddleware />}>
+          <Route element={<AuthMiddleware />}> 
 
-            {/* 🧾 Industry Profile (OUTSIDE MainLayout) */}
+
             <Route
               path="/industry/profile"
               element={<IndustryProfileForm />}
@@ -39,11 +39,12 @@ export default function App() {
               <Route path="/scanner" element={<Scanner />} />
               <Route path="/trends" element={<Trends />} />
               <Route path="/predict" element={<Predictor />} />
+              <Route path="/treatment-simulation" element={<TreatmentSimulation/>}/>
             </Route>
 
-          </Route>
+          </Route> 
 
-          {/* ❌ Catch-all */}
+
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </div>
