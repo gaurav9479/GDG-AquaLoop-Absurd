@@ -7,7 +7,7 @@ export default function Navbar() {
       <Link to="/scanner">Scanner</Link>
       <Link to="/trends">Trends</Link>
       <Link to="/predict">Predict</Link>
-       <Link to="/predict-stage">treatment simulator</Link>
+      <Link to="/predict-stage">treatment simulator</Link>
       
     </nav>
   );

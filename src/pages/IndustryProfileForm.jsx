@@ -116,7 +116,7 @@ export default function IndustryProfileForm() {
 
   /* ---------------- SUBMIT ---------------- */
   const handleSubmit = async () => {
-    if (!industryName || !industryType || !location) {
+    if (!industryName || !industryType ) {
       alert("Mandatory fields missing");
       return;
     }

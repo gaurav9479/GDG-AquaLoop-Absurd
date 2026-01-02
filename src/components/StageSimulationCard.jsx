@@ -128,3 +128,4 @@ const StageSimulationCard = ({ stage, before, after }) => {
 };
 
 export default StageSimulationCard;
+
