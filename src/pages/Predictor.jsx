@@ -28,10 +28,8 @@ import {
   getDocs,
   query,
   orderBy,
-  limit,
+  // limit, // 1. Removed limit import as it's no longer used
 } from "firebase/firestore";
-
-/* ================= CONSTANTS ================= */
 
 const PARAMETER_INFO = {
   ph: { unit: "ph", limit: 14 },
@@ -46,34 +44,12 @@ const PARAMETER_INFO = {
 };
 
 const GRADE_RULES = {
-  A: {
-    label: "Premium Potable",
-    color: "#22c55e",
-    uses: ["Drinking", "Food Prep", "Medical"],
-  },
-  B: {
-    label: "Standard Potable",
-    color: "#10b981",
-    uses: ["Cooking", "Bathing", "Laundry"],
-  },
-  C: {
-    label: "Utility Water",
-    color: "#f59e0b",
-    uses: ["Irrigation", "Car Wash", "Toilets"],
-  },
-  D: {
-    label: "Industrial Only",
-    color: "#f97316",
-    uses: ["Cooling", "Fire Control"],
-  },
-  UNSAFE: {
-    label: "Hazardous",
-    color: "#ef4444",
-    uses: ["No Contact", "Treat First"],
-  },
+  A: { label: "Premium Potable", color: "#22c55e", uses: ["Drinking", "Food Prep", "Medical"] },
+  B: { label: "Standard Potable", color: "#10b981", uses: ["Cooking", "Bathing", "Laundry"] },
+  C: { label: "Utility Water", color: "#f59e0b", uses: ["Irrigation", "Car Wash", "Toilets"] },
+  D: { label: "Industrial Only", color: "#f97316", uses: ["Cooling", "Fire Control"] },
+  UNSAFE: { label: "Hazardous", color: "#ef4444", uses: ["No Contact", "Treat First"] },
 };
-
-/* ================= COMPONENT ================= */
 
 export default function Predictor() {
   const reportRef = useRef(null);
@@ -94,15 +70,13 @@ export default function Predictor() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  /* ================= LOAD DATA FROM FIREBASE ================= */
-
   useEffect(() => {
     const fetchReports = async () => {
       try {
+        // 2. Removed limit(5) to fetch all historical records from the database
         const q = query(
           collection(db, "aqualoop_reports"),
-          orderBy("timestamp", "desc"),
-          limit(5)
+          orderBy("timestamp", "desc")
         );
 
         const snapshot = await getDocs(q);
@@ -127,8 +101,6 @@ export default function Predictor() {
     fetchReports();
   }, []);
 
-  /* ================= PDF ================= */
-
   const downloadReport = async () => {
     const element = reportRef.current;
     const canvas = await html2canvas(element, {
@@ -152,18 +124,13 @@ export default function Predictor() {
     pdf.save("AquaLoop_Diagnostic_Report.pdf");
   };
 
-  /* ================= CHART ================= */
-
   const chartData = Object.keys(formData).map((key) => ({
     subject: key.replace("_", " ").toUpperCase(),
-    value:
-      (Number(formData[key]) / (PARAMETER_INFO[key]?.limit || 100)) * 100,
+    value: (Number(formData[key]) / (PARAMETER_INFO[key]?.limit || 100)) * 100,
   }));
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
-
-  /* ================= SUBMIT ================= */
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -177,24 +144,20 @@ export default function Predictor() {
 
       setResult(res.data);
 
-      setHistory((prev) =>
-        [
-          {
-            grade: res.data.predicted_grade,
-            time: new Date().toLocaleTimeString("en-IN"),
-          },
-          ...prev,
-        ].slice(0, 5)
-      );
+      // 3. Removed .slice(0, 5) to allow the local history state to grow indefinitely
+      setHistory((prev) => [
+        {
+          grade: res.data.predicted_grade,
+          time: new Date().toLocaleTimeString("en-IN"),
+        },
+        ...prev,
+      ]);
 
-      // 🔥 SAVE TO FIREBASE (GLOBAL)
       await addDoc(collection(db, "aqualoop_reports"), {
         timestamp: serverTimestamp(),
-
         inputs: Object.fromEntries(
           Object.entries(formData).map(([k, v]) => [k, Number(v)])
         ),
-
         predicted_grade: res.data.predicted_grade,
         reuse_allowed: res.data.reuse_allowed,
         confidence: res.data.reuse_allowed ? 99.2 : 96.8,
@@ -210,23 +173,17 @@ export default function Predictor() {
     ? GRADE_RULES[result.predicted_grade] || GRADE_RULES.UNSAFE
     : null;
 
-  /* ================= UI ================= */
-
   return (
     <div ref={reportRef} className="w-full pb-10">
-      {/* STATUS HEADER */}
+      {/* HEADER SECTION */}
       <div className="flex justify-between items-center border-b border-aqua-border pb-6 mb-8">
         <div className="flex items-center gap-3">
           <span
-            className={`h-2.5 w-2.5 rounded-full ${
-              result ? "" : "bg-emerald-500 animate-pulse"
-            }`}
+            className={`h-2.5 w-2.5 rounded-full ${result ? "" : "bg-emerald-500 animate-pulse"}`}
             style={{ backgroundColor: currentGrade?.color }}
           />
           <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">
-            {result
-              ? `Diagnostic Status: ${currentGrade.label}`
-              : "Analyzer Ready"}
+            {result ? `Diagnostic Status: ${currentGrade.label}` : "Analyzer Ready"}
           </p>
         </div>
 
@@ -240,7 +197,7 @@ export default function Predictor() {
         )}
       </div>
 
-      {/* KPI GRID */}
+      {/* STATS CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-aqua-surface border border-aqua-border p-6 rounded-2xl">
           <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center gap-2 mb-2">
@@ -251,21 +208,12 @@ export default function Predictor() {
 
         <div
           className="bg-aqua-surface border border-aqua-border p-6 rounded-2xl"
-          style={{
-            borderLeft: `4px solid ${
-              currentGrade ? currentGrade.color : "transparent"
-            }`,
-          }}
+          style={{ borderLeft: `4px solid ${currentGrade ? currentGrade.color : "transparent"}` }}
         >
           <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center gap-2 mb-2">
             <Activity size={14} className="text-aqua-cyan" /> Grade
           </p>
-          <p
-            className="text-3xl font-black"
-            style={{
-              color: currentGrade ? currentGrade.color : "#f8fafc",
-            }}
-          >
+          <p className="text-3xl font-black" style={{ color: currentGrade ? currentGrade.color : "#f8fafc" }}>
             {result ? result.predicted_grade : "N/A"}
           </p>
         </div>
@@ -280,25 +228,17 @@ export default function Predictor() {
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
+      {/* MAIN CONTENT GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* INPUTS */}
         <section className="bg-aqua-surface/40 border border-aqua-border p-6 rounded-3xl">
           <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 border-l-4 border-aqua-cyan pl-4">
             Diagnostic Inputs
           </h3>
-
-          <form
-            onSubmit={handleSubmit}
-            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-          >
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {Object.keys(formData).map((key) => (
               <div key={key} className="flex flex-col gap-1.5">
                 <label className="text-[9px] font-black text-slate-500 uppercase">
-                  {key.replace("_", " ")}{" "}
-                  <span className="text-aqua-cyan lowercase italic">
-                    ({PARAMETER_INFO[key]?.unit})
-                  </span>
+                  {key.replace("_", " ")} <span className="text-aqua-cyan lowercase italic">({PARAMETER_INFO[key]?.unit})</span>
                 </label>
                 <input
                   type="number"
@@ -309,93 +249,54 @@ export default function Predictor() {
                 />
               </div>
             ))}
-
             <button
               type="submit"
               className="sm:col-span-2 mt-4 p-4 rounded-xl text-black font-black uppercase tracking-[0.2em] text-[10px] transition-all active:scale-95"
-              style={{
-                backgroundColor: currentGrade ? currentGrade.color : "#00f2ff",
-              }}
+              style={{ backgroundColor: currentGrade ? currentGrade.color : "#00f2ff" }}
             >
               {loading ? "Analyzing..." : "Run Diagnostic"}
             </button>
           </form>
         </section>
 
-        {/* RADAR */}
         <section className="bg-aqua-surface/40 border border-aqua-border p-6 rounded-3xl flex flex-col items-center">
           <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 self-start border-l-4 border-aqua-cyan pl-4">
             Distribution Profile
           </h3>
-
           <div className="w-full h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart
-                cx="50%"
-                cy="50%"
-                outerRadius="80%"
-                data={chartData}
-              >
+              <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
                 <PolarGrid stroke="#1e293b" />
-                <PolarAngleAxis
-                  dataKey="subject"
-                  tick={{ fill: "#475569", fontSize: 10, fontWeight: "900" }}
-                />
+                <PolarAngleAxis dataKey="subject" tick={{ fill: "#475569", fontSize: 10, fontWeight: "900" }} />
                 <PolarRadiusAxis domain={[0, 100]} tick={false} />
-                <Radar
-                  dataKey="value"
-                  stroke={currentGrade?.color || "#00f2ff"}
-                  fill={currentGrade?.color || "#00f2ff"}
-                  fillOpacity={0.3}
-                />
+                <Radar dataKey="value" stroke={currentGrade?.color || "#00f2ff"} fill={currentGrade?.color || "#00f2ff"} fillOpacity={0.3} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
-
           {result && (
             <div className="w-full mt-4 p-4 rounded-2xl bg-black/40 border border-aqua-border text-center">
-              <div
-                className="text-4xl font-black"
-                style={{ color: currentGrade.color }}
-              >
-                {result.predicted_grade}
-              </div>
-
+              <div className="text-4xl font-black" style={{ color: currentGrade.color }}>{result.predicted_grade}</div>
               <div className="flex flex-wrap gap-2 justify-center mt-3">
                 {currentGrade.uses.map((u) => (
-                  <span
-                    key={u}
-                    className="text-[8px] bg-aqua-dark border border-aqua-border px-2 py-1 rounded-lg text-slate-300 font-black uppercase tracking-widest"
-                  >
-                    {u}
-                  </span>
+                  <span key={u} className="text-[8px] bg-aqua-dark border border-aqua-border px-2 py-1 rounded-lg text-slate-300 font-black uppercase tracking-widest">{u}</span>
                 ))}
               </div>
             </div>
           )}
         </section>
 
-        {/* LOG */}
         <section className="bg-aqua-surface/40 border border-aqua-border p-6 rounded-3xl">
           <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 border-l-4 border-aqua-cyan pl-4">
             Recent Log
           </h3>
-
-          <div className="space-y-3">
+          {/* 4. Added overflow-y-auto and max-height to ensure the list is scrollable when it gets long */}
+          <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
             {history.map((h, i) => (
-              <div
-                key={i}
-                className="flex justify-between items-center p-3 bg-black/40 rounded-xl border border-aqua-border/50"
-              >
+              <div key={i} className="flex justify-between items-center p-3 bg-black/40 rounded-xl border border-aqua-border/50">
                 <div>
-                  <p className="text-xs font-black text-white uppercase">
-                    Grade {h.grade}
-                  </p>
-                  <p className="text-[9px] text-slate-500 font-bold">
-                    {h.time}
-                  </p>
+                  <p className="text-xs font-black text-white uppercase">Grade {h.grade}</p>
+                  <p className="text-[9px] text-slate-500 font-bold">{h.time}</p>
                 </div>
-
                 {["A", "B"].includes(h.grade) ? (
                   <CheckCircle size={18} className="text-emerald-500" />
                 ) : (

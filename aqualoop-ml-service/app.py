@@ -85,9 +85,6 @@ def predict(data: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-
-
-
 @app.post("/treatment/predict-stage")
 def predict_treatment_stage(data: dict):
     try:

@@ -39,7 +39,7 @@ export default function App() {
               <Route path="/scanner" element={<Scanner />} />
               <Route path="/trends" element={<Trends />} />
               <Route path="/predict" element={<Predictor />} />
-              <Route path="/treatment-simulation" element={<TreatmentSimulation/>}/>
+              <Route path="/predict-stage" element={<TreatmentSimulation/>}/>
             </Route>
 
           </Route> 

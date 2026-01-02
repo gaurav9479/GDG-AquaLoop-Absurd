@@ -1,14 +1,17 @@
 
-
-
 import axios from "axios";
 
-const API_URL = "http://127.0.0.1:8000";
+const ML_API_URL = "https://aqualoop-ml-service.onrender.com";
 
-export const simulateTreatmentStage = async (payload) => {
-  const res = await axios.post(
-    `${API_URL}/treatment/predict-stage`,
-    payload
+export const simulateTreatmentStage = async (data) => {
+  const response = await axios.post(
+    `${ML_API_URL}/treatment/predict-stage`,
+    data,
+    {
+      headers: {
+        "Content-Type": "application/json"
+      }
+    }
   );
-  return res.data;
+  return response.data;
 };
