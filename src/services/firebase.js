@@ -3,6 +3,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 // 🔎 Optional ENV sanity check (remove in production)
 console.log("ENV CHECK", {
@@ -28,6 +29,7 @@ const app = !getApps().length
 // ✅ Firebase services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const storage = getStorage(app); // ✅ ADD THIS
 
 // ✅ Google Auth Provider
 export const googleProvider = new GoogleAuthProvider();
