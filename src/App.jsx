@@ -9,6 +9,7 @@ import MainLayout from "./layout/MainLayout";
 import AuthMiddleware from "./middleware/AuthMiddleware";
 import IndustryProfileForm from "./pages/IndustryProfileForm";
 import TreatmentSimulation from "./pages/TreatmentSimulation";
+import Landing from "./pages/Landing";
 
 export default function App() {
   return (
@@ -20,7 +21,8 @@ export default function App() {
       <div className="relative z-10">
         <Routes>
           {/* 🌐 Public Routes */}
-          <Route path="/" element={<Login />} />
+          <Route path="/" element={<Landing />} />
+       {/*  <Route path="/" element={<Login />} />  */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
 
