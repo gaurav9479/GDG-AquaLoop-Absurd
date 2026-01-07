@@ -94,7 +94,7 @@ export default function Predictor() {
           setResult(reports[0]);
           setHistory(
             reports.map((r) => ({
-              grade: r.predicted_grade,
+              grade: r.predicted_grade || r.ml_analytics?.grade || "N/A",
               time: r.timestamp
                 ?.toDate()
                 .toLocaleTimeString("en-IN"),
@@ -157,6 +157,7 @@ export default function Predictor() {
       timestamp: serverTimestamp(),
       volume: Number(formData.volume),
       inputs: formData,
+      predicted_grade: res.data.predicted_grade, // Save at root for quick access
       ml_analytics: {
         grade: res.data.predicted_grade,
         allowed: res.data.reuse_allowed,
@@ -171,7 +172,7 @@ export default function Predictor() {
 };
 
   const currentGrade = result
-    ? GRADE_RULES[result.predicted_grade] || GRADE_RULES.UNSAFE
+    ? GRADE_RULES[result.predicted_grade || result.ml_analytics?.grade] || GRADE_RULES.UNSAFE
     : null;
 
   return (
@@ -215,7 +216,7 @@ export default function Predictor() {
             <Activity size={14} className="text-aqua-cyan" /> Grade
           </p>
           <p className="text-3xl font-black" style={{ color: currentGrade ? currentGrade.color : "#f8fafc" }}>
-            {result ? result.predicted_grade : "N/A"}
+            {result ? (result.predicted_grade || result.ml_analytics?.grade || "N/A") : "N/A"}
           </p>
         </div>
 
@@ -276,7 +277,7 @@ export default function Predictor() {
           </div>
           {result && (
             <div className="w-full mt-4 p-4 rounded-2xl bg-black/40 border border-aqua-border text-center">
-              <div className="text-4xl font-black" style={{ color: currentGrade.color }}>{result.predicted_grade}</div>
+              <div className="text-4xl font-black" style={{ color: currentGrade.color }}>{result.predicted_grade || result.ml_analytics?.grade}</div>
               <div className="flex flex-wrap gap-2 justify-center mt-3">
                 {currentGrade.uses.map((u) => (
                   <span key={u} className="text-[8px] bg-aqua-dark border border-aqua-border px-2 py-1 rounded-lg text-slate-300 font-black uppercase tracking-widest">{u}</span>

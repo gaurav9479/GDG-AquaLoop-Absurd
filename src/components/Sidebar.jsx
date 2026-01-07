@@ -6,7 +6,12 @@ import {
   Brain,
   Activity,
   Settings, 
-  LogOut 
+  LogOut,
+  ShoppingCart,
+  FileText,
+  Store,
+  Package,
+  ClipboardList
 } from "lucide-react";
 
 const NavItem = ({ to, icon: Icon, label }) => (
@@ -46,6 +51,19 @@ export default function Sidebar({ onLogout }) {
         <NavItem to="/predict" icon={Brain} label="Predict" />
         <NavItem to="/predict-stage" icon={Activity} label="Treatment Simulation" />
 
+        {/* Commerce Section */}
+        <div className="pt-4 mt-4 border-t border-aqua-border/30">
+          <div className="px-4 mb-3">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+              Water Commerce
+            </span>
+          </div>
+          <NavItem to="/commerce/reports" icon={FileText} label="My Reports" />
+          <NavItem to="/commerce/sell" icon={Store} label="Sell Water" />
+          <NavItem to="/commerce/buy" icon={ShoppingCart} label="Buy Water" />
+          <NavItem to="/commerce/orders/buyer" icon={Package} label="My Purchases" />
+          <NavItem to="/commerce/orders/seller" icon={ClipboardList} label="Sales Orders" />
+        </div>
 
 
 
