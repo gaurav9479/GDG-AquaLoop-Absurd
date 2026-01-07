@@ -65,4 +65,23 @@
   color: white;
 }
 
+
+    .auth-input option {
+        background-color: #0f172a;
+        color: white;
+    }
+
+    /* Custom Scrollbar for Aqua Theme */
+    .aqua-scrollbar::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .aqua-scrollbar::-webkit-scrollbar-track {
+        @apply bg-transparent;
+    }
+
+    .aqua-scrollbar::-webkit-scrollbar-thumb {
+        @apply bg-aqua-border rounded-full hover:bg-aqua-cyan/50 transition-colors;
+    }
+
 }

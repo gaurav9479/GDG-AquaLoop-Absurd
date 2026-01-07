@@ -15,13 +15,14 @@ export default function SellWater() {
   const [submitting, setSubmitting] = useState(false);
   const [predictingPrice, setPredictingPrice] = useState(false);
   
-  // Report & User Data
+
   const [report, setReport] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   
-  // Form Data
+
   const [volume, setVolume] = useState("");
   const [predictedPrice, setPredictedPrice] = useState(null);
+  const [pricePerKLD, setPricePerKLD] = useState("");
   const [description, setDescription] = useState("");
 
   useEffect(() => {
@@ -33,7 +34,6 @@ export default function SellWater() {
           return;
         }
 
-        // Fetch report
         if (reportId) {
           const reportSnap = await getDoc(doc(db, "aqualoop_reports", reportId));
           if (reportSnap.exists()) {
@@ -41,7 +41,7 @@ export default function SellWater() {
           }
         }
 
-        // Fetch user profile
+
         const userSnap = await getDoc(doc(db, "users", user.uid));
         if (userSnap.exists()) {
           setUserProfile(userSnap.data());
@@ -60,7 +60,7 @@ export default function SellWater() {
   const handlePredictPrice = async () => {
     if (!volume || !report) return;
 
-    // Validate that we have actual data, not defaults
+
     if (!report.inputs?.ph || !report.inputs?.solids) {
       alert("Report data incomplete. Cannot predict price.");
       return;
@@ -80,6 +80,10 @@ export default function SellWater() {
 
       if (response.data.success) {
         setPredictedPrice(response.data);
+        // Automatically pre-fill the manual price if it's empty
+        if (!pricePerKLD) {
+          setPricePerKLD(response.data.pricePerKLD.toString());
+        }
       }
     } catch (error) {
       console.error("Price prediction error:", error);
@@ -111,8 +115,8 @@ export default function SellWater() {
           conductivity: report.inputs?.conductivity,
         },
         volume: parseFloat(volume),
-        pricePerKLD: predictedPrice.pricePerKLD,
-        totalPrice: predictedPrice.totalPrice,
+        pricePerKLD: parseFloat(pricePerKLD),
+        totalPrice: parseFloat(pricePerKLD) * parseFloat(volume),
         currency: "INR",
         location: userProfile?.location,
         industryInfo: {
@@ -125,13 +129,13 @@ export default function SellWater() {
 
       await axios.post("/api/createListing", listingData);
       
-      // Update the original report to mark it as listed
+
       await updateDoc(doc(db, "aqualoop_reports", report.id), {
         ecommerceStatus: "listed",
         listedAt: new Date().toISOString(),
         listingDetails: {
-          pricePerKLD: predictedPrice.pricePerKLD,
-          totalPrice: predictedPrice.totalPrice,
+          pricePerKLD: parseFloat(pricePerKLD),
+          totalPrice: parseFloat(pricePerKLD) * parseFloat(volume),
           volume: parseFloat(volume)
         }
       });
@@ -217,72 +221,95 @@ export default function SellWater() {
             </div>
           )}
 
-          {/* Volume Input */}
-          <div className="space-y-6 mb-8">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
             <div>
               <label className="text-slate-300 text-sm font-semibold mb-2 block">
                 Volume Available (KLD)
               </label>
-              <input
-                type="number"
-                value={volume}
-                onChange={(e) => setVolume(e.target.value)}
-                onBlur={handlePredictPrice}
-                className="w-full px-4 py-3 bg-slate-900/50 border border-aqua-cyan/30 rounded-xl text-white focus:outline-none focus:border-aqua-cyan transition-colors"
-                placeholder="Enter volume in KLD"
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  value={volume}
+                  onChange={(e) => setVolume(e.target.value)}
+                  onBlur={handlePredictPrice}
+                  className="w-full px-4 py-4 bg-slate-900/50 border border-aqua-cyan/30 rounded-2xl text-white font-bold text-lg focus:outline-none focus:border-aqua-cyan transition-all"
+                  placeholder="0.00"
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">KLD</div>
+              </div>
             </div>
 
             <div>
-              <label className="text-slate-300 text-sm font-semibold mb-2 block">
-                Description (Optional)
+              <label className="text-slate-300 text-sm font-semibold mb-2 block flex items-center justify-between">
+                <span>Asking Price (₹/KLD)</span>
+                {predictedPrice && (
+                  <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest bg-emerald-400/10 px-2 py-0.5 rounded">
+                    AI Suggested: ₹{predictedPrice.pricePerKLD.toFixed(2)}
+                  </span>
+                )}
               </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-900/50 border border-aqua-cyan/30 rounded-xl text-white focus:outline-none focus:border-aqua-cyan transition-colors resize-none"
-                rows={3}
-                placeholder="Add any additional details..."
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  value={pricePerKLD}
+                  onChange={(e) => setPricePerKLD(e.target.value)}
+                  className="w-full px-4 py-4 bg-slate-900/50 border border-aqua-cyan/30 rounded-2xl text-emerald-400 font-black text-2xl focus:outline-none focus:border-aqua-cyan transition-all"
+                  placeholder="0.00"
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">₹</div>
+              </div>
             </div>
           </div>
 
-          {/* Price Prediction */}
+
+          <div className="mb-8">
+            <label className="text-slate-300 text-sm font-semibold mb-2 block">
+              Description (Optional)
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-900/50 border border-aqua-cyan/30 rounded-xl text-white focus:outline-none focus:border-aqua-cyan transition-colors resize-none"
+              rows={3}
+              placeholder="Add any additional details about the water source, availability, or pickup instructions..."
+            />
+          </div>
+
+
           {predictingPrice && (
             <div className="bg-purple-500/10 border border-purple-500/30 rounded-2xl p-6 mb-8 flex items-center gap-3">
               <Sparkles className="text-purple-400 animate-pulse" size={24} />
-              <span className="text-purple-400 font-semibold">Gemini AI is predicting the best price...</span>
+              <span className="text-purple-400 font-semibold">Gemini AI is analyzing market trends...</span>
             </div>
           )}
 
-          {predictedPrice && (
+
+          {volume && pricePerKLD && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-gradient-to-r from-emerald-500/20 to-aqua-cyan/20 border border-emerald-500/40 rounded-2xl p-8 mb-8"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-aqua-surface/50 border border-aqua-border rounded-2xl p-6 mb-8"
             >
-              <div className="flex items-center gap-3 mb-4">
-                <TrendingUp className="text-emerald-400" size={28} />
-                <h3 className="text-white font-black text-xl">AI-Predicted Price</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-slate-400 text-sm mb-1">Price per KLD</p>
-                  <p className="text-emerald-400 font-black text-3xl">
-                    ₹{predictedPrice.pricePerKLD.toFixed(2)}
-                  </p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="text-aqua-cyan" size={24} />
+                  <div>
+                    <h3 className="text-slate-400 text-xs font-black uppercase tracking-widest">Estimated Revenue</h3>
+                    <p className="text-white text-sm">Total value of this listing</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-slate-400 text-sm mb-1">Total Price</p>
+                <div className="text-right">
                   <p className="text-aqua-cyan font-black text-3xl">
-                    ₹{predictedPrice.totalPrice.toLocaleString()}
+                    ₹{(parseFloat(volume) * parseFloat(pricePerKLD)).toLocaleString()}
                   </p>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase">Incl. all taxes</p>
                 </div>
               </div>
             </motion.div>
           )}
 
-          {/* Actions */}
+
           <div className="flex gap-4">
             <button
               onClick={() => navigate("/dashboard")}
@@ -292,7 +319,7 @@ export default function SellWater() {
             </button>
             <button
               onClick={handleSubmit}
-              disabled={submitting || !predictedPrice}
+              disabled={submitting || !pricePerKLD || !volume}
               className="flex-1 px-6 py-3 bg-gradient-to-r from-aqua-cyan to-emerald-400 hover:from-aqua-cyan/80 hover:to-emerald-400/80 text-black font-black rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? "Listing..." : "List for Sale"}

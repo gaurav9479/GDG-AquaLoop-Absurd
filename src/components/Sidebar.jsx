@@ -44,7 +44,7 @@ export default function Sidebar({ onLogout }) {
       </div>
 
       {/* Navigation Links */}
-      <nav className="flex-1 space-y-2">
+      <nav className="flex-1 space-y-2 overflow-y-auto pr-2 aqua-scrollbar">
         <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
         <NavItem to="/scanner" icon={ScanLine} label="Scanner" />
         <NavItem to="/trends" icon={BarChart3} label="Analytics" />
@@ -64,9 +64,6 @@ export default function Sidebar({ onLogout }) {
           <NavItem to="/commerce/orders/buyer" icon={Package} label="My Purchases" />
           <NavItem to="/commerce/orders/seller" icon={ClipboardList} label="Sales Orders" />
         </div>
-
-
-
       </nav>
 
       {/* Footer / User Section */}
