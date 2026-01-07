@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import Globe from "react-globe.gl";
 import { 
-  Droplets, ShieldCheck, BarChart3, Globe as GlobeIcon, Factory, Users, 
+  Droplets, ShieldCheck, Globe as GlobeIcon, Factory, Users, 
   ArrowRight, Activity, Zap, Terminal, Mail, MessageSquare, Send, 
   LifeBuoy, FlaskConical, Waves, Cpu
 } from "lucide-react";

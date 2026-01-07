@@ -5,6 +5,7 @@ import {
   BarChart3, 
   Brain,
   Activity,
+  Radar,
   Settings, 
   LogOut 
 } from "lucide-react";
@@ -45,6 +46,8 @@ export default function Sidebar({ onLogout }) {
         <NavItem to="/trends" icon={BarChart3} label="Analytics" />
         <NavItem to="/predict" icon={Brain} label="Predict" />
         <NavItem to="/predict-stage" icon={Activity} label="Treatment Simulation" />
+        <NavItem to="/water-risk-map" icon={Radar} label="Water Risk Map" />
+
 
 
 
