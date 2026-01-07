@@ -15,12 +15,14 @@ import {
   CheckCircle,
   AlertOctagon,
   Download,
+  Volume,
+
 } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
 // 🔥 FIREBASE (GLOBAL COLLECTION)
-import { db } from "../services/firebase";
+import { auth, db } from "../services/firebase";
 import {
   addDoc,
   collection,
@@ -28,8 +30,9 @@ import {
   getDocs,
   query,
   orderBy,
-  // limit, // 1. Removed limit import as it's no longer used
+  where
 } from "firebase/firestore";
+
 
 const PARAMETER_INFO = {
   ph: { unit: "ph", limit: 14 },
@@ -41,6 +44,7 @@ const PARAMETER_INFO = {
   organic_carbon: { unit: "ppm", limit: 30 },
   trihalomethanes: { unit: "µg/l", limit: 120 },
   turbidity: { unit: "ntu", limit: 10 },
+  volume: { unit: "liters", limit: 10000 },
 };
 
 const GRADE_RULES = {
@@ -64,6 +68,7 @@ export default function Predictor() {
     organic_carbon: 10,
     trihalomethanes: 60,
     turbidity: 4,
+    volume:1000,
   });
 
   const [result, setResult] = useState(null);
@@ -72,15 +77,18 @@ export default function Predictor() {
 
   useEffect(() => {
     const fetchReports = async () => {
+      const user=auth.currentUser
       try {
-        // 2. Removed limit(5) to fetch all historical records from the database
+
         const q = query(
           collection(db, "aqualoop_reports"),
+          where("userId", "==", user.uid),
           orderBy("timestamp", "desc")
         );
 
         const snapshot = await getDocs(q);
         const reports = snapshot.docs.map((doc) => doc.data());
+        
 
         if (reports.length > 0) {
           setResult(reports[0]);
@@ -90,6 +98,7 @@ export default function Predictor() {
               time: r.timestamp
                 ?.toDate()
                 .toLocaleTimeString("en-IN"),
+              volume: r.volume
             }))
           );
         }
@@ -133,41 +142,33 @@ export default function Predictor() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  const user = auth.currentUser;
+  if (!user) return;
 
-    try {
-      const res = await axios.post(
-        "https://aqualoop-ml-service.onrender.com/predict",
-        formData
-      );
+  setLoading(true);
+  try {
 
-      setResult(res.data);
+    const res = await axios.post("https://aqualoop-ml-service.onrender.com/predict", formData);
 
-      // 3. Removed .slice(0, 5) to allow the local history state to grow indefinitely
-      setHistory((prev) => [
-        {
-          grade: res.data.predicted_grade,
-          time: new Date().toLocaleTimeString("en-IN"),
-        },
-        ...prev,
-      ]);
 
-      await addDoc(collection(db, "aqualoop_reports"), {
-        timestamp: serverTimestamp(),
-        inputs: Object.fromEntries(
-          Object.entries(formData).map(([k, v]) => [k, Number(v)])
-        ),
-        predicted_grade: res.data.predicted_grade,
-        reuse_allowed: res.data.reuse_allowed,
-        confidence: res.data.reuse_allowed ? 99.2 : 96.8,
-      });
-    } catch (err) {
-      console.error("API / Firebase Error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    await addDoc(collection(db, "aqualoop_reports"), {
+      userId: user.uid,
+      timestamp: serverTimestamp(),
+      volume: Number(formData.volume),
+      inputs: formData,
+      ml_analytics: {
+        grade: res.data.predicted_grade,
+        allowed: res.data.reuse_allowed,
+        confidence: 99.2
+      }
+    });
+
+    alert("ML Analysis Captured. Brief generating on Dashboard.");
+  } catch (err) {
+    console.error(err);
+  } finally { setLoading(false); }
+};
 
   const currentGrade = result
     ? GRADE_RULES[result.predicted_grade] || GRADE_RULES.UNSAFE

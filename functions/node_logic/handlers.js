@@ -5,10 +5,20 @@ const { runGemini } = require("./geminiHelper");
 
 const askGemini = async (req, res) => {
   try {
-    const { prompt } = req.body;
-    const result = await runGemini(prompt);
+    const { prompt,docId,updatefield,collection = "aqualoop_reports"} = req.body;
+    const aiResponse = await runGemini(prompt);
+    if (docId && updatefield) {
+      await db.collection("aqualoop_reports").doc(docId).update({
+        [updatefield]: {
+          content: aiResponse,
+          generated_at: new Date().toISOString(),
+          status:"completed"
+        }
+      });
+    }
     res.status(200).json({ result });
   } catch (err) {
+    console.error("Gemini Bridge Error:", err);
     res.status(500).json({ error: err.message });
   }
 };

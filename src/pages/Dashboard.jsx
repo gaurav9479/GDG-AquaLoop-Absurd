@@ -1,152 +1,174 @@
-import React from "react";
-import { KPICard } from "../layout/KpiCard";
-import {
-  Activity,
-  ShieldCheck,
-  CheckCircle2,
-  Droplets,
-  Navigation,
-  Cpu
+import React, { useState, useEffect, useMemo } from "react";
+import axios from "axios"; // Ensure axios is installed
+import { auth, db } from "../services/firebase";
+import { 
+  collection, 
+  query, 
+  orderBy, 
+  where, 
+  onSnapshot 
+} from "firebase/firestore";
+import { 
+  Activity, ShieldCheck, Droplets, Cpu, BarChart3, 
+  BrainCircuit, Sparkles, FileText, Loader2 
 } from "lucide-react";
-
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid
+import { 
+  BarChart, Bar, XAxis, YAxis, Tooltip, 
+  ResponsiveContainer, CartesianGrid, Legend 
 } from "recharts";
-
-// 📊 Sample Trend Data
-const trendData = [
-  { time: "10:00", actual: 72, predicted: 70 },
-  { time: "11:00", actual: 74, predicted: 73 },
-  { time: "12:00", actual: 76, predicted: 75 },
-  { time: "13:00", actual: 80, predicted: 78 },
-  { time: "14:00", actual: 84, predicted: 82 }
-];
+import { KPICard } from "../layout/KpiCard";
 
 const DashBoard = () => {
+  const [reports, setReports] = useState([]);
+  const [latestReport, setLatestReport] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const q = query(
+      collection(db, "aqualoop_reports"),
+      where("userId", "==", user.uid),
+      orderBy("timestamp", "desc")
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setReports(data);
+      
+      if (data.length > 0) {
+        setLatestReport(data[0]);
+        
+        // 1. TRIGGER GENERIC HANDLER: 
+        // If 'processed_data' field doesn't exist, we poke the backend bridge.
+        if (!data[0].processed_data && !isProcessing) {
+          triggerNeuralAudit(data[0]);
+        }
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+
+  const triggerNeuralAudit = async (report) => {
+    setIsProcessing(true);
+    try {
+      await axios.post("/api/ask-gemini", {
+        docId: report.id,
+        updatefield: "processed_data", // Field where generic handler will save data
+        prompt: `
+          Technical Audit for Water ID: ${report.id}
+          Grade: ${report.predicted_grade} | Volume: ${report.volume}L
+          Chemistry: ${JSON.stringify(report.inputs)}
+
+          Provide a concise technical briefing:
+          1. REUSE SUMMARY: Specific destination.
+          2. CHEMICAL ALERTS: Highlight critical parameters.
+          3. SUSTAINABILITY: Water saved in liters.
+        `
+      });
+
+    } catch (err) {
+      console.error("Neural Bridge Error:", err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const chartData = useMemo(() => {
+    const dataMap = reports.reduce((acc, curr) => {
+      const date = curr.timestamp?.toDate().toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      if (!date) return acc;
+      
+      if (!acc[date]) acc[date] = { date, A: 0, B: 0, C: 0, D: 0 };
+      const grade = curr.predicted_grade || "D";
+      acc[date][grade] = (acc[date][grade] || 0) + (curr.volume || 0);
+      
+      return acc;
+    }, {});
+    return Object.values(dataMap).reverse();
+  }, [reports]);
+
+  if (loading) return (
+    <div className="h-screen flex items-center justify-center bg-black">
+      <Loader2 className="animate-spin text-aqua-cyan" />
+    </div>
+  );
+
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-aqua-cyan text-xs font-black tracking-[0.4em] uppercase">
-            Core Metrics
-          </h1>
-          <h2 className="text-3xl font-bold text-white mt-1">
-            Water Sample Analysis
-          </h2>
-        </div>
-
-        <div className="bg-aqua-surface/40 border border-aqua-border px-4 py-2 rounded-xl backdrop-blur-sm">
-          <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">
-            AI Trust Score
-          </p>
-          <p className="text-aqua-success text-sm font-bold">
-            98.2% Accuracy
-          </p>
-        </div>
+    <div className="p-10 space-y-10 max-w-7xl mx-auto">
+      {/* KPI Section */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <KPICard title="Accumulated Volume" value={`${reports.reduce((a, b) => a + (b.volume || 0), 0).toLocaleString()}L`} icon={<Droplets className="text-aqua-cyan"/>} />
+        <KPICard title="Last Grade" value={latestReport?.predicted_grade || 'N/A'} icon={<Activity className="text-emerald-400"/>} />
+        <KPICard title="AI Status" value={isProcessing ? "Analyzing..." : "Synced"} icon={<Cpu className="text-purple-400"/>} />
+        <KPICard title="System Trust" value={`${latestReport?.confidence || 98.4}%`} icon={<ShieldCheck className="text-aqua-cyan"/>} />
       </div>
 
-      {/* KPI GRID */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <KPICard title="Quality Score" value="84" statusColor="excellent" icon={<Activity size={18} />}>
-          <div className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-aqua-success animate-pulse" />
-            <p className="text-aqua-success text-[10px] font-bold uppercase">
-              Excellent
-            </p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <div className="lg:col-span-2 bg-aqua-surface/30 border border-aqua-border rounded-[2.5rem] p-8 shadow-2xl">
+          <div className="flex items-center gap-3 mb-6">
+            <BarChart3 className="text-aqua-cyan" size={20} />
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Recovery Distribution</h3>
           </div>
-        </KPICard>
-
-        <KPICard title="Classification" value="Grade A" icon={<ShieldCheck size={18} />}>
-          <span className="bg-aqua-teal/20 text-aqua-cyan px-2 py-0.5 rounded-md text-[9px] border border-aqua-cyan/30 font-black uppercase">
-            Premium Reuse
-          </span>
-        </KPICard>
-
-        <KPICard title="Safe for Reuse" value="YES" statusColor="excellent" icon={<CheckCircle2 size={18} />}>
-          <p className="text-slate-500 text-[9px]">
-            ISO Compliant
-          </p>
-        </KPICard>
-
-        <KPICard title="Total Volume" value="5,400" icon={<Droplets size={18} />}>
-          <span className="text-slate-500 text-[10px] font-bold">
-            LITERS
-          </span>
-        </KPICard>
-
-        <KPICard title="Recommended" value="Agri" icon={<Navigation size={18} />}>
-          <p className="text-aqua-cyan/80 text-[10px] italic">
-            Crop irrigation
-          </p>
-        </KPICard>
-      </div>
-
-      {/* STAGE */}
-      <span className="text-[10px] font-bold bg-aqua-dark/80 px-3 py-1.5 rounded-lg border border-aqua-border">
-        STAGE: TERTIARY
-      </span>
-
-      {/* CHART + ML LOGIC */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* CHART */}
-        <div className="lg:col-span-1 bg-aqua-surface/30 border border-aqua-border rounded-3xl p-5 h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={trendData}>
-              <defs>
-                <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-
-              <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="time" stroke="#94a3b8" fontSize={11} />
-              <YAxis hide />
-              <Tooltip />
-
-              <Area
-                type="monotone"
-                dataKey="predicted"
-                stroke="#38bdf8"
-                strokeDasharray="6 6"
-                fill="transparent"
-              />
-              <Area
-                type="monotone"
-                dataKey="actual"
-                stroke="#38bdf8"
-                fill="url(#chartFill)"
-                strokeWidth={3}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <XAxis dataKey="date" axisLine={false} tick={{fill: '#64748b', fontSize: 10}} />
+                <YAxis axisLine={false} tick={{fill: '#64748b', fontSize: 10}} unit="L" />
+                <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #1e293b', borderRadius: '12px'}} />
+                <Legend iconType="circle" wrapperStyle={{fontSize: '9px', textTransform: 'uppercase', paddingTop: '20px'}} />
+                <Bar dataKey="A" name="Grade A" stackId="a" fill="#22c55e" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="B" name="Grade B" stackId="a" fill="#00f2ff" />
+                <Bar dataKey="C" name="Grade C" stackId="a" fill="#f59e0b" />
+                <Bar dataKey="D" name="Grade D" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        {/* ML PANEL */}
-        <div className="lg:col-span-2 bg-aqua-surface/30 border border-aqua-border rounded-3xl p-7 h-72">
-          <div className="flex items-center gap-3 mb-6 text-aqua-cyan">
-            <Cpu size={18} className="animate-pulse" />
-            <h3 className="text-white text-sm font-bold uppercase tracking-wider">
-              Neural Logic Synthesis
-            </h3>
+        {/* AI Synthesis Viewer */}
+        <div className="bg-aqua-surface/60 border border-aqua-cyan/20 rounded-[2.5rem] p-8">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <BrainCircuit className="text-aqua-cyan" size={22} />
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-white">Neural Brief</h3>
+            </div>
+            {isProcessing && <Sparkles className="animate-pulse text-yellow-400" size={16} />}
           </div>
 
-          <p className="text-slate-200 text-sm leading-relaxed">
-            AI recommends <span className="text-aqua-cyan font-black">Agricultural Reuse</span>.
-            Nutrient retention exceeds thresholds, reducing fertilizer dependency
-            while maintaining ISO safety compliance.
-          </p>
-        </div>
+          <div className="min-h-[250px] flex flex-col justify-between">
+            {latestReport?.processed_data?.content ? (
+              <div className="animate-in fade-in slide-in-from-bottom-2">
+                <div className="flex items-start gap-4">
+                  <FileText className="text-aqua-cyan shrink-0" size={18} />
+                  <div className="text-[11px] leading-relaxed text-slate-300 font-medium whitespace-pre-wrap">
+                    {latestReport.processed_data.content}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 opacity-30">
+                <Loader2 className="animate-spin mb-4 text-aqua-cyan" />
+                <p className="text-[9px] font-black uppercase tracking-widest text-aqua-cyan">Syncing with AI Bridge...</p>
+              </div>
+            )}
 
+            <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between">
+                <span className="text-[8px] text-slate-500 font-bold uppercase">Batch: {latestReport?.id?.substring(0,8) || 'N/A'}</span>
+                <div className="flex items-center gap-1.5">
+                    <div className="h-1 w-1 rounded-full bg-aqua-success animate-pulse"></div>
+                    <span className="text-[8px] text-aqua-success font-black uppercase">Live Link</span>
+                </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
