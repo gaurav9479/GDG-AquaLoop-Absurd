@@ -3,6 +3,7 @@ import { simulateTreatmentStage } from "../services/treatmentSimulationService";
 import { onAuthStateChanged } from "firebase/auth";
 import { TREATMENT_STAGES } from "../utils/treatmentStages";
 import StageSimulationCard from "../components/StageSimulationCard";
+
 import {
   Activity,
   Droplets,
@@ -10,7 +11,6 @@ import {
   Play,
   Settings2,
   Database,
-  RefreshCcw,
   FlaskConical,
   Beaker,
   ShieldCheck,
@@ -20,12 +20,10 @@ import {
   Edit3
 } from "lucide-react";
 
-/* ✅ CORRECT FIREBASE IMPORT */
 import { auth, db } from "../services/firebase";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 
 /* ---------------- CONSTANTS ---------------- */
-
 
 const INDUSTRY_PROFILES = {
   textile: {
@@ -64,7 +62,6 @@ const PARAM_METADATA = [
 ];
 
 /* ---------------- FIREBASE SAVE ---------------- */
-console.log("Auth user at save time:", auth.currentUser);
 
 const saveSimulationForUser = async ({
   industry,
@@ -74,13 +71,7 @@ const saveSimulationForUser = async ({
 }) => {
   try {
     const user = auth.currentUser;
-
-    if (!user) {
-      console.error("No authenticated user. Simulation NOT saved.");
-      return;
-    }
-
-    console.log("saveSimulationForUser called for UID:", user.uid);
+    if (!user) return;
 
     await addDoc(
       collection(db, "users", user.uid, "simulations"),
@@ -89,17 +80,34 @@ const saveSimulationForUser = async ({
         manualIndustryName: manualIndustryName || null,
         influent,
         stages: results,
-        createdAt: Timestamp.now(),
+        createdAt: Timestamp.now()
       }
     );
-
-    console.log("Simulation successfully saved to Firestore.");
-
   } catch (error) {
-    console.error("Error saving simulation to Firestore:", error);
+    console.error("Firestore save error:", error);
   }
 };
 
+/* ---------------- LOADER ---------------- */
+
+const SimulationLoader = () => (
+  <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center">
+    <div className="relative w-28 h-28">
+      <div className="absolute inset-0 rounded-full border-2 border-aqua-cyan/30 animate-ping" />
+      <div className="absolute inset-2 rounded-full border-2 border-aqua-cyan animate-spin" />
+      <div className="absolute inset-6 rounded-full bg-aqua-cyan/20 flex items-center justify-center">
+        <ShieldCheck className="text-aqua-cyan" size={28} />
+      </div>
+    </div>
+
+    <p className="mt-6 text-aqua-cyan font-bold tracking-widest animate-pulse">
+      SIMULATING TREATMENT STAGES
+    </p>
+    <p className="text-xs text-slate-400">
+      AI engine analyzing purification efficiency…
+    </p>
+  </div>
+);
 
 /* ---------------- COMPONENT ---------------- */
 
@@ -118,17 +126,17 @@ const TreatmentSimulation = () => {
   }, [industry]);
 
   useEffect(() => {
-  const unsub = onAuthStateChanged(auth, (user) => {
-    console.log("Auth ready:", user);
-  });
-  return () => unsub();
-}, []);
+    const unsub = onAuthStateChanged(auth, () => {});
+    return () => unsub();
+  }, []);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const runSimulation = async () => {
-    const finalIndustryLabel = industry === "manual" ? manualIndustryName : industry;
+    const finalIndustryLabel =
+      industry === "manual" ? manualIndustryName : industry;
 
     if (industry === "manual" && !manualIndustryName.trim()) {
       setError("Please specify the Manual Industry Name.");
@@ -174,7 +182,6 @@ const TreatmentSimulation = () => {
         influent: currentParams,
         results: history
       });
-
     } catch {
       setError("Simulation Engine Offline.");
     } finally {
@@ -182,10 +189,8 @@ const TreatmentSimulation = () => {
     }
   };
 
-  /* ---------------- JSX (FULL UI) ---------------- */
-
   return (
-    <div className="w-full space-y-2 animate-in fade-in duration-500">
+    <div className="w-full min-h-screen space-y-6 animate-in fade-in duration-500">
 
       {/* HEADER */}
       <header className="border-b border-aqua-border/20 pb-4">
@@ -201,14 +206,20 @@ const TreatmentSimulation = () => {
       </header>
 
       {/* MAIN GRID */}
-      <div className="grid lg:grid-cols-12 gap-10">
+      <div className="grid lg:grid-cols-12 gap-8 min-h-[70vh]">
 
-        {/* FORM */}
-        <aside className="lg:col-span-4 space-y-4">
+        {/* LEFT PANEL */}
+        <aside className="lg:col-span-4 bg-aqua-panel/80 backdrop-blur-xl border border-aqua-border/20 rounded-2xl p-6 space-y-5">
+
+          <div className="flex items-center gap-2 text-aqua-cyan text-xs font-bold tracking-widest">
+            <Settings2 size={16} />
+            INFLUENT LOGIC
+          </div>
+
           <select
             value={industry}
             onChange={(e) => setIndustry(e.target.value)}
-            className="w-full bg-aqua-dark text-white p-3 rounded-xl"
+            className="w-full bg-aqua-dark p-3 rounded-xl text-white"
           >
             {Object.entries(INDUSTRY_PROFILES).map(([k, v]) => (
               <option key={k} value={k}>{v.label}</option>
@@ -219,21 +230,25 @@ const TreatmentSimulation = () => {
             <input
               value={manualIndustryName}
               onChange={(e) => setManualIndustryName(e.target.value)}
-              placeholder="Industry name"
-              className="w-full bg-aqua-dark text-white p-3 rounded-xl"
+              placeholder="Industry Name"
+              className="w-full bg-aqua-dark p-3 rounded-xl text-white"
             />
           )}
 
           {PARAM_METADATA.map(p => (
-            <input
-              key={p.id}
-              name={p.id}
-              type="number"
-              value={form[p.id]}
-              onChange={handleChange}
-              placeholder={`${p.label} (${p.unit})`}
-              className="w-full bg-aqua-dark text-white p-3 rounded-xl"
-            />
+            <div key={p.id} className="relative">
+              <span className="absolute left-3 top-3 text-aqua-cyan">
+                {p.icon}
+              </span>
+              <input
+                name={p.id}
+                type="number"
+                value={form[p.id]}
+                onChange={handleChange}
+                placeholder={`${p.label} (${p.unit})`}
+                className="w-full pl-10 bg-aqua-dark p-3 rounded-xl text-white"
+              />
+            </div>
           ))}
 
           <button
@@ -241,24 +256,47 @@ const TreatmentSimulation = () => {
             disabled={loading}
             className="w-full bg-aqua-cyan text-black font-black p-4 rounded-xl"
           >
-            {loading ? "Analyzing..." : "Execute Simulation"}
+            <Play className="inline mr-2" size={18} />
+            {loading ? "PROCESSING..." : "EXECUTE SIMULATION"}
           </button>
 
           {error && <p className="text-red-400 text-sm">{error}</p>}
         </aside>
 
-        {/* RESULTS */}
-        <main className="lg:col-span-8 space-y-6">
-          {results.map((r, i) => (
-            <StageSimulationCard
-              key={i}
-              stage={r.stage}
-              before={r.before}
-              after={r.after}
-            />
-          ))}
-        </main>
+        {/* RIGHT PANEL */}
+        <main className="lg:col-span-8 bg-aqua-panel/40 border border-dashed border-aqua-border/30 rounded-2xl relative flex items-center justify-center">
 
+          {loading && <SimulationLoader />}
+
+          {!loading && results.length === 0 && (
+            <div className="text-center space-y-4 animate-pulse">
+              <div className="mx-auto w-20 h-20 rounded-full bg-aqua-cyan/10 flex items-center justify-center">
+                <Factory className="text-aqua-cyan" size={32} />
+              </div>
+              <h3 className="text-white font-bold tracking-widest">
+                AWAITING LOGIC INPUT
+              </h3>
+              <p className="text-slate-400 text-sm">
+                Initialize the simulation by configuring industry context  
+                and sensor data in the control panel.
+              </p>
+            </div>
+          )}
+
+          {!loading && results.length > 0 && (
+            <div className="w-full h-full p-6 overflow-y-auto space-y-6">
+              {results.map((r, i) => (
+                <StageSimulationCard
+                  key={i}
+                  stage={r.stage}
+                  before={r.before}
+                  after={r.after}
+                />
+              ))}
+            </div>
+          )}
+
+        </main>
       </div>
     </div>
   );
