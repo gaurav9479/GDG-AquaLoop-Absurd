@@ -53,7 +53,7 @@ const DashBoard = () => {
     return () => unsubscribe();
   }, []);
 
-  // 2. CALL THE GENERIC BACKEND BRIDGE
+
   const triggerNeuralAudit = async (report) => {
     setIsProcessing(true);
     try {
@@ -71,8 +71,7 @@ const DashBoard = () => {
           3. SUSTAINABILITY: Water saved in liters.
         `
       });
-      // We don't need a state update here because onSnapshot will 
-      // see the change in Firestore and update the UI automatically.
+
     } catch (err) {
       console.error("Neural Bridge Error:", err);
     } finally {
@@ -111,7 +110,7 @@ const DashBoard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Quality Distribution Graph */}
+
         <div className="lg:col-span-2 bg-aqua-surface/30 border border-aqua-border rounded-[2.5rem] p-8 shadow-2xl">
           <div className="flex items-center gap-3 mb-6">
             <BarChart3 className="text-aqua-cyan" size={20} />

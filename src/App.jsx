@@ -21,7 +21,7 @@ export default function App() {
       <div className="relative z-10">
         <Routes>
           {/* 🌐 Public Routes */}
-          {/* <Route path="/" element={<Landing />} /> */}
+          <Route path="/" element={<Landing />} />
        {/*  <Route path="/" element={<Login />} />  */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
