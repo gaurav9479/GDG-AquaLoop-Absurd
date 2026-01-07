@@ -10,15 +10,17 @@ import {
 } from "firebase/firestore";
 import { 
   Activity, ShieldCheck, Droplets, Cpu, BarChart3, 
-  BrainCircuit, Sparkles, FileText, Loader2 
+  BrainCircuit, Sparkles, FileText, Loader2, HelpCircle 
 } from "lucide-react";
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, 
   ResponsiveContainer, CartesianGrid, Legend 
 } from "recharts";
 import { KPICard } from "../layout/KpiCard";
+import { useNavigate } from "react-router-dom";
 
 const DashBoard = () => {
+  const navigate = useNavigate();
   const [reports, setReports] = useState([]);
   const [latestReport, setLatestReport] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -108,6 +110,19 @@ const DashBoard = () => {
         <KPICard title="AI Status" value={isProcessing ? "Analyzing..." : "Synced"} icon={<Cpu className="text-purple-400"/>} />
         <KPICard title="System Trust" value={`${latestReport?.confidence || 98.4}%`} icon={<ShieldCheck className="text-aqua-cyan"/>} />
       </div>
+
+      {/* Sell Water Button */}
+      {latestReport && (
+        <div className="flex justify-center">
+          <button
+            onClick={() => navigate("/commerce/reports")}
+            className="group flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-aqua-cyan/20 to-emerald-400/20 hover:from-aqua-cyan/30 hover:to-emerald-400/30 border border-aqua-cyan/40 rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-aqua-cyan/20"
+          >
+            <HelpCircle className="text-aqua-cyan group-hover:rotate-12 transition-transform" size={24} />
+            <span className="text-white font-bold tracking-wide">Want to sell this water?</span>
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
