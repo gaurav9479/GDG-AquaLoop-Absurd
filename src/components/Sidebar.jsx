@@ -5,6 +5,7 @@ import {
   BarChart3, 
   Brain,
   Activity,
+  Radar,
   Settings, 
   LogOut,
   ShoppingCart,
@@ -50,6 +51,8 @@ export default function Sidebar({ onLogout }) {
         <NavItem to="/trends" icon={BarChart3} label="Analytics" />
         <NavItem to="/predict" icon={Brain} label="Predict" />
         <NavItem to="/predict-stage" icon={Activity} label="Treatment Simulation" />
+        <NavItem to="/water-risk-map" icon={Radar} label="Water Risk Map" />
+
 
         {/* Commerce Section */}
         <div className="pt-4 mt-4 border-t border-aqua-border/30">
