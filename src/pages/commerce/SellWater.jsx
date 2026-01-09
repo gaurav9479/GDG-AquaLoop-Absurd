@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { auth, db } from "../../services/firebase";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, addDoc, collection } from "firebase/firestore";
 import axios from "axios";
 import { Droplets, TrendingUp, MapPin, Factory, Loader2, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
@@ -127,7 +127,14 @@ export default function SellWater() {
         description,
       };
 
-      await axios.post("/api/createListing", listingData);
+      // Add status and timestamp
+      const finalListingData = {
+        ...listingData,
+        status: "available",
+        createdAt: new Date().toISOString()
+      };
+
+      await addDoc(collection(db, "water_listings"), finalListingData);
       
 
       await updateDoc(doc(db, "aqualoop_reports", report.id), {
