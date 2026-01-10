@@ -1,18 +1,18 @@
+
 const axios = require("axios");
-const { runGemini } = require("./geminiHelper");
 const admin = require("firebase-admin");
-
 const { onRequest } = require("firebase-functions/v2/https");
-
 const ee = require("@google/earthengine");
+
+const { runGemini } = require("./geminiHelper");
 const serviceAccount = require("../service-account.json");
 
+admin.initializeApp();
 const db = admin.firestore();
 
 /* =========================
    EARTH ENGINE INIT
 ========================= */
-
 let eeReady = false;
 
 ee.data.authenticateViaPrivateKey(
@@ -20,57 +20,44 @@ ee.data.authenticateViaPrivateKey(
   () => {
     ee.initialize(null, null, () => {
       eeReady = true;
-      console.log("✅ Earth Engine initialized successfully (handlers.js)");
+      console.log("✅ Earth Engine initialized");
     });
   },
-  (err) => {
-    console.error("❌ Earth Engine auth error:", err);
-  }
+  (err) => console.error("❌ EE auth error:", err)
 );
 
 /* =========================
-   WATER DATA HELPER
+   HELPER
 ========================= */
-
 function getWaterDataNearLocation(lat, lng) {
   return new Promise((resolve, reject) => {
     try {
       const point = ee.Geometry.Point([lng, lat]);
-
       const dataset = ee.Image("JRC/GSW1_4/GlobalSurfaceWater");
-      const waterOccurrence = dataset.select("occurrence");
+      const water = dataset.select("occurrence");
 
-      const region = point.buffer(5000); // 5 km radius
-
-      const stats = waterOccurrence.reduceRegion({
+      const stats = water.reduceRegion({
         reducer: ee.Reducer.mean(),
-        geometry: region,
+        geometry: point.buffer(5000),
         scale: 30,
-        maxPixels: 1e9
+        maxPixels: 1e9,
       });
 
-      stats.evaluate((result) => {
-        resolve(result);
-      });
-    } catch (error) {
-      reject(error);
+      stats.evaluate(resolve);
+    } catch (e) {
+      reject(e);
     }
   });
 }
 
-
-
-const getWaterNearIndustry = async (req, res) => {
-
-  // ===== CORS (MANDATORY) =====
-  res.set("Access-Control-Allow-Origin", "http://localhost:5173");
-  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+ =========================
+   WATER AVAILABILITY
+exports.getWaterNearIndustry = onRequest(async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Headers", "Content-Type");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
 
-  if (req.method === "OPTIONS") {
-    return res.status(204).send("");
-  }
-  // ==========================
+  if (req.method === "OPTIONS") return res.status(204).send("");
 
   try {
     if (!eeReady) {
@@ -84,17 +71,13 @@ const getWaterNearIndustry = async (req, res) => {
     console.log("🔥 getWaterNearIndustry HIT", req.body);
 
     const { lat, lng } = req.body;
-
     if (!lat || !lng) {
-      return res.status(400).json({
-        success: false,
-        message: "lat and lng are required"
-      });
+      return res.status(400).json({ error: "lat and lng required" });
     }
 
-    const waterData = await getWaterDataNearLocation(lat, lng);
+    const data = await getWaterDataNearLocation(lat, lng);
 
-    return res.status(200).json({
+    res.json({
       success: true,
       location: { lat, lng },
       waterPresence: waterData?.occurrence || 0,
@@ -106,54 +89,37 @@ const getWaterNearIndustry = async (req, res) => {
     console.error("❌ getWaterNearIndustry ERROR:", err);
     return res.status(500).json({ success: false, error: err.message });
   }
-};
+});
 
-
-
-const askGemini = async (req, res) => {
-
+/* =========================
+   GEMINI AUDIT
+========================= */
+exports.askGemini = onRequest(async (req, res) => {
   res.set("Access-Control-Allow-Origin", "*");
-  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.set("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") {
-    return res.status(204).send("");
-  }
+  if (req.method === "OPTIONS") return res.status(204).send("");
 
   try {
-    console.log("🔥 askGemini HIT");
-    console.log("BODY:", req.body);
-
     const { prompt, docId, updatefield } = req.body;
-
     if (!prompt || !docId || !updatefield) {
-      return res.status(400).json({ error: "Missing prompt, docId or updatefield" });
+      return res.status(400).json({ error: "Missing fields" });
     }
 
-    const aiResponse = await runGemini(prompt);
+    const content = await runGemini(prompt);
 
-    await db.collection("aqualoop_reports").doc(docId).set({
+    await db.collection("aqualoop_reports").doc(docId).update({
       [updatefield]: {
-        content: aiResponse,
-        generated_at: admin.firestore.FieldValue.serverTimestamp(),
-        status: "completed"
-      }
-    }, { merge: true });
+        content,
+        generated_at: new Date().toISOString(),
+      },
+    });
 
-    return res.status(200).json({ success: true, content: aiResponse });
-
-  } catch (err) {
-    console.error("❌ askGemini ERROR:", err);
-    return res.status(500).json({ success: false, error: err.message });
+    res.json({ success: true, content });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
-};
-
-//  =========================
-//    WATER PRICE PREDICTION
-
-// const predictWaterPrice = async (req, res) => {
-//   try {
-//     const { grade, volume, pH, tds, bod, cod, location } = req.body;
+});
 
 //     const prompt = `
 // You are a water trading price expert. Predict a fair market price per KLD (kiloliters per day) for treated water based on the following parameters:
@@ -198,36 +164,14 @@ const predictWaterPrice = async (req, res) => {
   }
 
   try {
-    const { grade, volume, pH, tds, bod, cod, location } = req.body;
+    const { grade, volume } = req.body;
 
-    const prompt = `
-You are a water trading price expert. Predict a fair market price per KLD (kiloliters per day) for treated water based on the following parameters:
+    const prompt = `Predict water price per KLD for grade ${grade}, volume ${volume}KLD. Only number.`;
+    const reply = await runGemini(prompt);
 
-- Water Quality Grade: ${grade}
-- Volume Available: ${volume} KLD
-- pH Level: ${pH}
-- TDS (Total Dissolved Solids): ${tds} mg/L
-- BOD (Biochemical Oxygen Demand): ${bod} mg/L
-- COD (Chemical Oxygen Demand): ${cod} mg/L
-- Location: ${location}
+    const price = Number(reply.match(/\d+/)?.[0] || 25);
 
-Consider:
-1. Higher grades (A) should command premium prices
-2. Larger volumes may offer bulk discounts
-3. Location-based market demand
-4. Treatment cost recovery
-5. Typical industrial water rates in India (₹10-50 per KLD)
-
-Provide ONLY a single number representing the price per KLD in Indian Rupees (₹). No explanation, just the number.
-    `.trim();
-
-    const predictedPrice = await runGemini(prompt);
-
-    // Extract just the number from Gemini's response
-    const priceMatch = predictedPrice.match(/\d+(\.\d+)?/);
-    const price = priceMatch ? parseFloat(priceMatch[0]) : 25; // Default to ₹25 if parsing fails
-
-    res.status(200).json({
+    res.json({
       success: true,
       pricePerKLD: price,
       totalPrice: price * volume,
@@ -322,3 +266,30 @@ module.exports = {
   createListing,
   getListings,
 };
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/* =========================
+   LISTINGS
+exports.createListing = onRequest(async (req, res) => {
+  const doc = await db.collection("water_listings").add({
+    ...req.body,
+    status: "available",
+    createdAt: new Date().toISOString(),
+  });
+
+  res.json({ success: true, id: doc.id });
+});
+
+exports.getListings = onRequest(async (req, res) => {
+  const snap = await db.collection("water_listings")
+    .where("status", "==", "available")
+    .get();
+
+  res.json({
+    listings: snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  });
+});

@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -12,12 +13,15 @@ import {
   FileText,
   Store,
   Package,
-  ClipboardList
+  ClipboardList,
+  Menu, // Hamburger icon
+  X     // Close icon
 } from "lucide-react";
 
-const NavItem = ({ to, icon: Icon, label }) => (
+const NavItem = ({ to, icon: Icon, label, onClick }) => (
   <NavLink
     to={to}
+    onClick={onClick} // Closes sidebar on mobile after clicking
     className={({ isActive }) => `
       flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group
       ${isActive 
@@ -31,57 +35,88 @@ const NavItem = ({ to, icon: Icon, label }) => (
 );
 
 export default function Sidebar({ onLogout }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const toggleSidebar = () => setIsOpen(!isOpen);
+  const closeSidebar = () => setIsOpen(false);
+
   return (
-    <aside className="w-64 h-screen bg-aqua-dark border-r border-aqua-border flex flex-col p-6 sticky top-0">
-      
-      {/* Logo Section */}
-      <div className="flex items-center gap-3 mb-10 px-2">
-        <div className="h-8 w-8 bg-aqua-cyan rounded-lg flex items-center justify-center shadow-glow-cyan">
-          <div className="h-4 w-4 border-2 border-aqua-dark rounded-full border-t-transparent animate-spin-slow" />
-        </div>
-        <span className="text-white font-black tracking-tighter text-xl italic">
-          AQUALOOP
-        </span>
-      </div>
+    <>
+      {/* 🟢 HAMBURGER BUTTON (Visible only on mobile) */}
+      <button 
+        onClick={toggleSidebar}
+        className="fixed top-4 left-4 z-[60] p-2 bg-aqua-dark border border-aqua-border rounded-lg text-aqua-cyan md:hidden shadow-lg shadow-black/50"
+      >
+        {isOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 space-y-2 overflow-y-auto pr-2 aqua-scrollbar">
-        <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
-        <NavItem to="/scanner" icon={ScanLine} label="Scanner" />
-        <NavItem to="/trends" icon={BarChart3} label="Analytics" />
-        <NavItem to="/predict" icon={Brain} label="Predict" />
-        <NavItem to="/predict-stage" icon={Activity} label="Treatment Simulation" />
-        <NavItem to="/water-risk-map" icon={Radar} label="Water Risk Map" />
+      {/* 🟢 BACKDROP OVERLAY (Visible only when mobile sidebar is open) */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[40] md:hidden animate-in fade-in duration-300"
+          onClick={closeSidebar}
+        />
+      )}
 
-        {/* Commerce Section */}
-        <div className="pt-4 mt-4 border-t border-aqua-border/30">
-          <div className="px-4 mb-3">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-              Water Commerce
-            </span>
-          </div>
-          <NavItem to="/commerce/reports" icon={FileText} label="My Reports" />
-          <NavItem to="/commerce/sell" icon={Store} label="Sell Water" />
-          <NavItem to="/commerce/buy" icon={ShoppingCart} label="Buy Water" />
-          <NavItem to="/commerce/orders/buyer" icon={Package} label="My Purchases" />
-          <NavItem to="/commerce/orders/seller" icon={ClipboardList} label="Sales Orders" />
-        </div>
+      {/* 🟢 SIDEBAR CONTAINER */}
+      <aside className={`
+        fixed md:sticky top-0 left-0 z-[50]
+        w-64 h-screen bg-aqua-dark border-r border-aqua-border 
+        flex flex-col p-6 transition-transform duration-300 ease-in-out
+        ${isOpen ? "translate-x-0" : "-translate-x-full"} 
+        md:translate-x-0
+      `}>
         
-      </nav>
+        {/* Logo Section */}
+        <div className="flex items-center gap-3 mb-10 px-2">
+          <div className="h-8 w-8 bg-aqua-cyan rounded-lg flex items-center justify-center shadow-glow-cyan">
+            <div className="h-4 w-4 border-2 border-aqua-dark rounded-full border-t-transparent animate-spin-slow" />
+          </div>
+          <span className="text-white font-black tracking-tighter text-xl italic uppercase">
+            AQUALOOP
+          </span>
+        </div>
 
-      {/* Footer / User Section */}
-      <div className="pt-6 border-t border-aqua-border space-y-4">
-        <NavItem to="/settings" icon={Settings} label="Settings" />
+        {/* Navigation Links */}
+        <nav className="flex-1 space-y-2 overflow-y-auto pr-2 aqua-scrollbar">
+          <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" onClick={closeSidebar} />
+          <NavItem to="/scanner" icon={ScanLine} label="Scanner" onClick={closeSidebar} />
+          <NavItem to="/trends" icon={BarChart3} label="Analytics" onClick={closeSidebar} />
+          <NavItem to="/predict" icon={Brain} label="Predict" onClick={closeSidebar} />
+          <NavItem to="/predict-stage" icon={Activity} label="Treatment Simulation" onClick={closeSidebar} />
+          <NavItem to="/water-risk-map" icon={Radar} label="Water Risk Map" onClick={closeSidebar} />
 
-        {/* 🔴 WORKING SIGN OUT */}
-        <button
-          onClick={onLogout}
-          className="flex items-center gap-3 px-4 py-3 w-full text-red-400 hover:bg-red-500/10 rounded-xl transition-all"
-        >
-          <LogOut size={20} />
-          <span className="text-sm font-semibold">Sign Out</span>
-        </button>
-      </div>
-    </aside>
+          {/* Commerce Section */}
+          <div className="pt-4 mt-4 border-t border-aqua-border/30">
+            <div className="px-4 mb-3">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                Water Commerce
+              </span>
+            </div>
+            <NavItem to="/commerce/reports" icon={FileText} label="My Reports" onClick={closeSidebar} />
+            <NavItem to="/commerce/sell" icon={Store} label="Sell Water" onClick={closeSidebar} />
+            <NavItem to="/commerce/buy" icon={ShoppingCart} label="Buy Water" onClick={closeSidebar} />
+            <NavItem to="/commerce/orders/buyer" icon={Package} label="My Purchases" onClick={closeSidebar} />
+            <NavItem to="/commerce/orders/seller" icon={ClipboardList} label="Sales Orders" onClick={closeSidebar} />
+          </div>
+        </nav>
+
+        {/* Footer / User Section */}
+        <div className="pt-6 border-t border-aqua-border space-y-4">
+          <NavItem to="/settings" icon={Settings} label="Settings" onClick={closeSidebar} />
+
+          <button
+            onClick={() => {
+              closeSidebar();
+              onLogout();
+            }}
+            className="flex items-center gap-3 px-4 py-3 w-full text-red-400 hover:bg-red-500/10 rounded-xl transition-all group"
+          >
+            <LogOut size={20} className="transition-transform group-hover:-translate-x-1" />
+            <span className="text-sm font-semibold">Sign Out</span>
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }
