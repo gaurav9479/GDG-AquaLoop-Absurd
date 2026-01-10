@@ -2,8 +2,6 @@ const axios = require("axios");
 const { runGemini } = require("./geminiHelper");
 const admin = require("firebase-admin");
 
-const { onRequest } = require("firebase-functions/v2/https");
-
 const ee = require("@google/earthengine");
 const serviceAccount = require("../service-account.json"); // âš ï¸ rotate later, keep safe
 
@@ -63,31 +61,19 @@ function getWaterDataNearLocation(lat, lng) {
 ========================= */
 
 const getWaterNearIndustry = async (req, res) => {
-
-  // ===== CORS (MANDATORY) =====
-  res.set("Access-Control-Allow-Origin", "http://localhost:5173");
+  res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.set("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") {
     return res.status(204).send("");
   }
-  // ==========================
 
   try {
     if (!eeReady) {
       return res.status(503).json({
         success: false,
         message: "Earth Engine not initialized yet, try again"
-    const { prompt, docId, updatefield, collection = "aqualoop_reports" } = req.body;
-    const aiResponse = await runGemini(prompt);
-    if (docId && updatefield) {
-      await db.collection("aqualoop_reports").doc(docId).update({
-        [updatefield]: {
-          content: aiResponse,
-          generated_at: new Date().toISOString(),
-          status: "completed"
-        }
       });
     }
 
@@ -120,10 +106,11 @@ const getWaterNearIndustry = async (req, res) => {
   }
 };
 
-
+/* =========================
+   GEMINI HANDLER
+========================= */
 
 const askGemini = async (req, res) => {
-
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.set("Access-Control-Allow-Headers", "Content-Type");
@@ -160,42 +147,9 @@ const askGemini = async (req, res) => {
   }
 };
 
-//  =========================
-//    WATER PRICE PREDICTION
-
-// const predictWaterPrice = async (req, res) => {
-//   try {
-//     const { grade, volume, pH, tds, bod, cod, location } = req.body;
-
-//     const prompt = `
-// You are a water trading price expert. Predict a fair market price per KLD (kiloliters per day) for treated water based on the following parameters:
-
-// - Water Quality Grade: ${grade}
-// - Volume Available: ${volume} KLD
-// - pH Level: ${pH}
-// - TDS (Total Dissolved Solids): ${tds} mg/L
-// - BOD (Biochemical Oxygen Demand): ${bod} mg/L
-// - COD (Chemical Oxygen Demand): ${cod} mg/L
-// - Location: ${location}
-
-// Provide ONLY a single number representing the price per KLD in Indian Rupees (â‚¹).
-//     `.trim();
-
-//     const predictedPrice = await runGemini(prompt);
-
-//     const priceMatch = predictedPrice.match(/\d+(\.\d+)?/);
-//     const price = priceMatch ? parseFloat(priceMatch[0]) : 25;
-
-//     res.status(200).json({
-//       success: true,
-//       pricePerKLD: price,
-//       totalPrice: price * volume,
-//       currency: "INR"
-//     });
-
-//   } catch (err) {
-//     console.error("Price Prediction Error:", err);
-/* ---------------- WATER PRICE PREDICTION HANDLER (NEW) ---------------- */
+/* =========================
+   WATER PRICE PREDICTION
+========================= */
 
 const predictWaterPrice = async (req, res) => {
   try {
@@ -224,9 +178,8 @@ Provide ONLY a single number representing the price per KLD in Indian Rupees (â‚
 
     const predictedPrice = await runGemini(prompt);
 
-    // Extract just the number from Gemini's response
     const priceMatch = predictedPrice.match(/\d+(\.\d+)?/);
-    const price = priceMatch ? parseFloat(priceMatch[0]) : 25; // Default to â‚¹25 if parsing fails
+    const price = priceMatch ? parseFloat(priceMatch[0]) : 25;
 
     res.status(200).json({
       success: true,
@@ -234,6 +187,7 @@ Provide ONLY a single number representing the price per KLD in Indian Rupees (â‚
       totalPrice: price * volume,
       currency: "INR"
     });
+
   } catch (err) {
     console.error("Price Prediction Error:", err);
     res.status(500).json({
@@ -243,61 +197,9 @@ Provide ONLY a single number representing the price per KLD in Indian Rupees (â‚
   }
 };
 
-/* ---------------- CREATE LISTING HANDLER (NEW) ---------------- */
-
-const createListing = async (req, res) => {
-  try {
-    const listingData = req.body;
-
-    // Add to Firestore (assuming db is imported from firebase-admin)
-    const docRef = await db.collection("water_listings").add({
-      ...listingData,
-      status: "available",
-      createdAt: new Date().toISOString()
-    });
-
-    res.status(201).json({
-      success: true,
-      listingId: docRef.id
-    });
-  } catch (err) {
-    console.error("Create Listing Error:", err);
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
-  }
-};
-
-/* ---------------- GET LISTINGS HANDLER (NEW) ---------------- */
-
-const getListings = async (req, res) => {
-  try {
-    const snapshot = await db.collection("water_listings")
-      .where("status", "==", "available")
-      .orderBy("createdAt", "desc")
-      .get();
-
-    const listings = [];
-    snapshot.forEach(doc => {
-      listings.push({ id: doc.id, ...doc.data() });
-    });
-
-    res.status(200).json({
-      success: true,
-      listings
-    });
-  } catch (err) {
-    console.error("Get Listings Error:", err);
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
-  }
-};
-
 /* =========================
    CREATE LISTING
+========================= */
 
 const createListing = async (req, res) => {
   try {
@@ -325,6 +227,7 @@ const createListing = async (req, res) => {
 
 /* =========================
    GET LISTINGS
+========================= */
 
 const getListings = async (req, res) => {
   try {
@@ -353,19 +256,13 @@ const getListings = async (req, res) => {
 };
 
 /* =========================
-   EXPORTS (Firebase v2 style)
-
-exports.askGemini = onRequest(askGemini);
-exports.predictWaterPrice = onRequest(predictWaterPrice);
-exports.createListing = onRequest(createListing);
-exports.getListings = onRequest(getListings);
-exports.getWaterNearIndustry = onRequest(getWaterNearIndustry);
-/* ---------------- EXPORT ALL ---------------- */
+   EXPORT PURE FUNCTIONS
+========================= */
 
 module.exports = {
   askGemini,
-  getWaterPrediction,
   predictWaterPrice,
   createListing,
   getListings,
+  getWaterNearIndustry
 };
