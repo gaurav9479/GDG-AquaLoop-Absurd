@@ -20,6 +20,7 @@ import {
 } from "recharts";
 import { KPICard } from "../layout/KpiCard";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";   // ✅ ADDED
 
 const DashBoard = () => {
   const navigate = useNavigate();
@@ -202,7 +203,6 @@ const DashBoard = () => {
         <KPICard title="System Trust" value={`${latestReport?.confidence || 98.4}%`} icon={<ShieldCheck className="text-aqua-cyan"/>} />
       </div>
 
-
       {latestReport && (
         <div className="flex justify-center">
           <button
@@ -241,47 +241,96 @@ const DashBoard = () => {
           </div>
         </div>
 
-        {/* WATER AVAILABILITY */}
-        <div className="bg-aqua-surface/60 border border-aqua-cyan/20 rounded-[2.5rem] p-8 shadow-2xl">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <Droplets className="text-aqua-cyan" size={22} />
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-white">Water Availability</h3>
+        {/* 🌍 ENHANCED WATER AVAILABILITY */}
+        <motion.div
+          initial={{ opacity: 0, y: 30, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="bg-aqua-surface/60 border border-aqua-cyan/30 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-aqua-cyan/10 via-transparent to-emerald-400/10 pointer-events-none" />
+
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Droplets className="text-aqua-cyan animate-pulse" size={22} />
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-white">Water Availability Index</h3>
+              </div>
+              {waterLoading && <Loader2 className="animate-spin text-aqua-cyan" size={16} />}
             </div>
-            {waterLoading && <Loader2 className="animate-spin text-aqua-cyan" size={16} />}
+
+            {waterPresence !== null ? (
+              <div className="space-y-6">
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-[11px] text-slate-400 uppercase">Surface Water Presence</p>
+                    <motion.p
+                      initial={{ scale: 0.8 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 200 }}
+                      className="text-4xl font-black text-aqua-cyan leading-none"
+                    >
+                      {waterPresence.toFixed(2)}%
+                    </motion.p>
+                  </div>
+
+                  <span className={`text-xs font-black uppercase px-3 py-1 rounded-full ${
+                    waterRisk === "Low" ? "bg-emerald-400/20 text-emerald-400" :
+                    waterRisk === "Medium" ? "bg-yellow-400/20 text-yellow-400" :
+                    "bg-red-400/20 text-red-400"
+                  }`}>
+                    {waterRisk} Risk
+                  </span>
+                </div>
+
+                <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${waterPresence}%` }}
+                    transition={{ duration: 1.2, ease: "easeOut" }}
+                    className={`h-full rounded-full ${
+                      waterRisk === "Low" ? "bg-emerald-400" :
+                      waterRisk === "Medium" ? "bg-yellow-400" :
+                      "bg-red-400"
+                    }`}
+                  />
+                </div>
+
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  {waterRisk === "Low" && "Excellent surface water availability. High reuse potential and low dependency on freshwater."}
+                  {waterRisk === "Medium" && "Moderate water availability. Reuse optimization and controlled intake advised."}
+                  {waterRisk === "High" && "Critical water stress zone. Immediate reuse strategy and alternative sourcing required."}
+                </p>
+
+                <div className="pt-4 border-t border-white/10 grid grid-cols-2 gap-4 text-[10px]">
+                  <div>
+                    <p className="text-slate-400 uppercase">Water Stress</p>
+                    <p className="text-white font-bold">
+                      {waterRisk === "Low" ? "Minimal" : waterRisk === "Medium" ? "Moderate" : "Severe"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 uppercase">Reuse Priority</p>
+                    <p className="text-white font-bold">
+                      {waterRisk === "Low" ? "Medium" : waterRisk === "Medium" ? "High" : "Critical"}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-slate-500 italic pt-2">
+                  Based on Google Earth Engine satellite analysis within 5km radius.
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-14 opacity-40">
+                <Loader2 className="animate-spin mb-3 text-aqua-cyan" />
+                <p className="text-[9px] font-black uppercase tracking-widest text-aqua-cyan">
+                  Fetching satellite data...
+                </p>
+              </div>
+            )}
           </div>
-
-          {waterPresence !== null ? (
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-[11px] text-slate-400 uppercase">Surface Water</span>
-                <span className="text-xl font-black text-aqua-cyan">{waterPresence.toFixed(2)}%</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-[11px] text-slate-400 uppercase">Risk Level</span>
-                <span className={`text-sm font-black uppercase ${
-                  waterRisk === "Low" ? "text-emerald-400" :
-                  waterRisk === "Medium" ? "text-yellow-400" :
-                  "text-red-400"
-                }`}>
-                  {waterRisk}
-                </span>
-              </div>
-
-              <p className="text-[10px] text-slate-400 pt-4 border-t border-white/5">
-                Based on Google Earth Engine satellite analysis within 5km radius.
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 opacity-40">
-              <Loader2 className="animate-spin mb-3 text-aqua-cyan" />
-              <p className="text-[9px] font-black uppercase tracking-widest text-aqua-cyan">
-                Fetching satellite data...
-              </p>
-            </div>
-          )}
-        </div>
+        </motion.div>
 
       </div>
 
