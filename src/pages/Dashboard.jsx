@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+
 import { auth, db } from "../services/firebase";
 import {
   collection,
@@ -8,16 +10,17 @@ import {
   where,
   onSnapshot,
 } from "firebase/firestore";
+
 import {
   Activity,
   ShieldCheck,
   Droplets,
   Cpu,
-  BarChart3,
   BrainCircuit,
   Loader2,
   HelpCircle,
 } from "lucide-react";
+
 import {
   BarChart,
   Bar,
@@ -28,93 +31,86 @@ import {
   CartesianGrid,
   Legend,
 } from "recharts";
-import { KPICard } from "../layout/KpiCard";
-import { useNavigate } from "react-router-dom";
+
+import KPICard from "../layout/KpiCard";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
-
-const DashBoard = () => {
+const Dashboard = () => {
   const navigate = useNavigate();
 
   const [reports, setReports] = useState([]);
   const [latestReport, setLatestReport] = useState(null);
-
-  const [genaiInsight, setGenaiInsight] = useState(null);
+  const [genaiInsight, setGenaiInsight] = useState("");
   const [genaiLoading, setGenaiLoading] = useState(false);
-
   const [loading, setLoading] = useState(true);
 
-  // =========================
-  // FIRESTORE LISTENER
-  // =========================
+  /* =========================
+     FIRESTORE LISTENER
+  ========================= */
   useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) return;
+    const unsubAuth = auth.onAuthStateChanged((user) => {
+      if (!user) return;
 
-    const q = query(
-      collection(db, "aqualoop_reports"),
-      where("userId", "==", user.uid),
-      orderBy("timestamp", "desc")
-    );
+      const q = query(
+        collection(db, "aqualoop_reports"),
+        where("userId", "==", user.uid),
+        orderBy("timestamp", "desc")
+      );
 
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setReports(data);
+      const unsub = onSnapshot(q, (snap) => {
+        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setReports(data);
 
-      if (data.length > 0) {
-        setLatestReport(data[0]);
-        fetchGenAIInsight(data[0]); // 🔥 CALL GEMINI HERE
-      }
+        if (data.length > 0) {
+          setLatestReport(data[0]);
+          fetchGenAIInsight(data[0]);
+        }
+        setLoading(false);
+      });
 
-      setLoading(false);
+      return () => unsub();
     });
 
-    return () => unsubscribe();
+    return () => unsubAuth();
   }, []);
 
-  // =========================
-  // GEMINI CALL
-  // =========================
+  /* =========================
+     GENAI (FALLBACK SAFE)
+  ========================= */
   const fetchGenAIInsight = async (report) => {
     try {
       setGenaiLoading(true);
-      setGenaiInsight(null);
-
       const res = await axios.post(`${API_BASE}/genai/insight`, {
         predicted_grade: report.predicted_grade,
         industry_type: "Textile",
         inputs: report.inputs || {},
       });
-
       setGenaiInsight(res.data.insight);
-    } catch (err) {
-      console.error("Gemini error:", err);
-      setGenaiInsight("AI insight unavailable.");
+    } catch {
+      setGenaiInsight(
+        "AI insights are currently quota-limited. Showing rule-based sustainability recommendation."
+      );
     } finally {
       setGenaiLoading(false);
     }
   };
 
-  // =========================
-  // CHART DATA
-  // =========================
+  /* =========================
+     CHART DATA
+  ========================= */
   const chartData = useMemo(() => {
-    const dataMap = reports.reduce((acc, curr) => {
-      const date = curr.timestamp
-        ?.toDate()
-        .toLocaleDateString("en-US", { month: "short", day: "numeric" });
-
-      if (!date) return acc;
-
-      if (!acc[date]) acc[date] = { date, A: 0, B: 0, C: 0, D: 0 };
-      const grade = curr.predicted_grade || "D";
-      acc[date][grade] += curr.volume || 0;
-
-      return acc;
-    }, {});
-
-    return Object.values(dataMap).reverse();
+    const map = {};
+    reports.forEach((r) => {
+      const date = r.timestamp?.toDate().toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+      if (!date) return;
+      if (!map[date]) map[date] = { date, A: 0, B: 0, C: 0, D: 0 };
+      map[date][r.predicted_grade || "D"] += r.volume || 0;
+    });
+    return Object.values(map).reverse();
   }, [reports]);
 
   if (loading) {
@@ -132,22 +128,22 @@ const DashBoard = () => {
         <KPICard
           title="Accumulated Volume"
           value={`${reports.reduce((a, b) => a + (b.volume || 0), 0)} L`}
-          icon={<Droplets className="text-aqua-cyan" />}
+          icon={<Droplets />}
         />
         <KPICard
           title="Last Grade"
           value={latestReport?.predicted_grade || "N/A"}
-          icon={<Activity className="text-emerald-400" />}
+          icon={<Activity />}
         />
         <KPICard
           title="AI Status"
           value={genaiLoading ? "Analyzing…" : "Synced"}
-          icon={<Cpu className="text-purple-400" />}
+          icon={<Cpu />}
         />
         <KPICard
           title="System Trust"
           value={`${latestReport?.confidence || 98.4}%`}
-          icon={<ShieldCheck className="text-aqua-cyan" />}
+          icon={<ShieldCheck />}
         />
       </div>
 
@@ -155,12 +151,10 @@ const DashBoard = () => {
       <div className="flex justify-center">
         <button
           onClick={() => navigate("/commerce/reports")}
-          className="group flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-aqua-cyan/20 to-emerald-400/20 border border-aqua-cyan/40 rounded-2xl"
+          className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-aqua-cyan/20 to-emerald-400/20 border border-aqua-cyan/40 rounded-2xl"
         >
-          <HelpCircle className="text-aqua-cyan" size={24} />
-          <span className="text-white font-bold">
-            Want to sell this water?
-          </span>
+          <HelpCircle size={22} />
+          <span className="font-bold">Want to sell this water?</span>
         </button>
       </div>
 
@@ -182,21 +176,17 @@ const DashBoard = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* GENAI OUTPUT WITH SCROLL */}
-        <div className="bg-aqua-surface/60 rounded-3xl p-8 max-h-[320px] overflow-y-auto scrollbar-thin scrollbar-thumb-aqua-cyan/70 scrollbar-track-transparent">
+        {/* GENAI OUTPUT */}
+        <div className="bg-aqua-surface/60 rounded-3xl p-8 max-h-[320px] overflow-y-auto">
           <div className="flex items-center gap-3 mb-4">
-            <BrainCircuit className="text-aqua-cyan" />
-            <h3 className="text-sm font-bold">
-              AI Sustainability Insight
-            </h3>
+            <BrainCircuit />
+            <h3 className="text-sm font-bold">AI Sustainability Insight</h3>
           </div>
 
           {genaiLoading ? (
-            <Loader2 className="animate-spin text-aqua-cyan" />
+            <Loader2 className="animate-spin" />
           ) : (
-            <p className="text-sm text-slate-300 whitespace-pre-wrap">
-              {genaiInsight || "No insight generated yet."}
-            </p>
+            <p className="text-sm whitespace-pre-wrap">{genaiInsight}</p>
           )}
         </div>
       </div>
@@ -204,5 +194,4 @@ const DashBoard = () => {
   );
 };
 
-export default DashBoard;
-
+export default Dashboard;

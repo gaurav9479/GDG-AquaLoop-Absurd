@@ -65,6 +65,10 @@ export default function Landing() {
         </motion.div>
         
         <div className="flex items-center gap-6">
+          <Link to="/marketplace/login" className="text-[8px] font-black uppercase tracking-[0.3em] text-cyan-400 hover:text-white transition-colors relative group font-mono">
+            Marketplace_Access
+            <span className="absolute -bottom-1 left-0 w-0 h-[1px] bg-white transition-all group-hover:w-full" />
+          </Link>
           <Link to="/login" className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-500 hover:text-cyan-400 transition-colors relative group font-mono">
             Node_Connect
             <span className="absolute -bottom-1 left-0 w-0 h-[1px] bg-cyan-400 transition-all group-hover:w-full" />
@@ -182,7 +186,9 @@ export default function Landing() {
           <FlowCard icon={<Search size={18}/>} num="01" title="OCR Scanner" desc="Escape the 'Paper Trap'. Digitization of reports to flag legal limit risks." />
           <FlowCard icon={<FlaskConical size={18}/>} num="02" title="Visual Advisor" desc="End 'Blind Treatment'. AI visual chemistry to optimize exact dosing." />
           <FlowCard icon={<Activity size={18}/>} num="03" title="Satellite Watch" desc="Monitor moisture telemetry from space to predict pump dry-out risks." />
-          <FlowCard icon={<Map size={18}/>} num="04" title="B2B Marketplace" desc="Close the 'Profit Gap'. Sell treated water directly to construction sites." />
+          <Link to="/marketplace">
+            <FlowCard icon={<Map size={18}/>} num="04" title="B2B Marketplace" desc="Close the 'Profit Gap'. Sell treated water directly to construction sites." />
+          </Link>
         </div>
       </section>
 
