@@ -10,6 +10,7 @@ export default function AuthMiddleware() {
 
   const [profileCompleted, setProfileCompleted] = useState(null);
   const [checkingProfile, setCheckingProfile] = useState(true);
+  const [isBuyer, setIsBuyer] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -19,8 +20,20 @@ export default function AuthMiddleware() {
       }
 
       try {
+        // 1. Check Industry User
         const snap = await getDoc(doc(db, "users", user.uid));
-        setProfileCompleted(snap.exists() ? snap.data().profileCompleted : false);
+        if (snap.exists()) {
+           setProfileCompleted(snap.data().profileCompleted);
+        } else {
+           // 2. Check Buyer
+           const buyerSnap = await getDoc(doc(db, "buyers", user.uid));
+           if (buyerSnap.exists()) {
+             setIsBuyer(true);
+             setProfileCompleted(true); 
+           } else {
+             setProfileCompleted(false);
+           }
+        }
       } catch (err) {
         console.error("Profile check failed:", err);
         setProfileCompleted(false);
@@ -44,6 +57,11 @@ export default function AuthMiddleware() {
   /* 🚫 Not logged in */
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  /* 🛍️ Buyers -> Marketplace (Protect Industry Dashboard) */
+  if (isBuyer) {
+    return <Navigate to="/marketplace" replace />;
   }
 
   /* 🧾 First-time users → force profile */

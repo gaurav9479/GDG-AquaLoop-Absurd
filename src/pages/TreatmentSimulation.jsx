@@ -60,6 +60,46 @@ const PARAM_METADATA = [
   { id: "tss", label: "TSS", unit: "mg/L", icon: <Database className="w-4 h-4" /> }
 ];
 
+/* ---------------- FIREBASE SAVE ---------------- */
+console.log("Auth user at save time:", auth.currentUser);
+
+const saveSimulationForUser = async ({
+  industry,
+  manualIndustryName,
+  influent,
+  results
+}) => {
+  try {
+    const user = auth.currentUser;
+
+    if (!user) {
+      console.error("No authenticated user. Simulation NOT saved.");
+      return;
+    }
+
+    console.log("saveSimulationForUser called for UID:", user.uid);
+
+    await addDoc(
+      collection(db, "users", user.uid, "simulations"),
+      {
+        industry,
+        manualIndustryName: manualIndustryName || null,
+        influent,
+        stages: results,
+        createdAt: Timestamp.now(),
+      }
+    );
+
+    console.log("Simulation successfully saved to Firestore.");
+
+  } catch (error) {
+    console.error("Error saving simulation to Firestore:", error);
+  }
+};
+
+
+
+
 const TreatmentSimulation = () => {
   const [industry, setIndustry] = useState("textile");
   const [manualIndustryName, setManualIndustryName] = useState("");
@@ -132,7 +172,16 @@ const TreatmentSimulation = () => {
       await saveSimulationForUser({ industry, manualIndustryName, influent: form, results: history });
     } catch {
       setError("Simulation Engine Offline.");
-    } finally {
+      
+      const user = auth.currentUser;
+      if (user) {
+        await addDoc(collection(db, "users", user.uid, "simulations"), {
+          industry, manualIndustryName: manualIndustryName || null,
+          influent: form, stages: history, createdAt: Timestamp.now()
+        });
+      }
+    } 
+     finally {
       setLoading(false);
     }
   };

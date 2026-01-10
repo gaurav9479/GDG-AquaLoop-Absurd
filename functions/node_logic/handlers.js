@@ -50,9 +50,8 @@ function getWaterDataNearLocation(lat, lng) {
   });
 }
 
-/* =========================
+ =========================
    WATER AVAILABILITY
-========================= */
 exports.getWaterNearIndustry = onRequest(async (req, res) => {
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Headers", "Content-Type");
@@ -62,8 +61,14 @@ exports.getWaterNearIndustry = onRequest(async (req, res) => {
 
   try {
     if (!eeReady) {
-      return res.status(503).json({ error: "Earth Engine not ready" });
+      return res.status(503).json({
+        success: false,
+        message: "Earth Engine not initialized yet, try again"
+      });
     }
+
+
+    console.log("🔥 getWaterNearIndustry HIT", req.body);
 
     const { lat, lng } = req.body;
     if (!lat || !lng) {
@@ -74,10 +79,15 @@ exports.getWaterNearIndustry = onRequest(async (req, res) => {
 
     res.json({
       success: true,
-      waterPresence: data?.occurrence || 0,
+      location: { lat, lng },
+      waterPresence: waterData?.occurrence || 0,
+      message: "Water data fetched successfully using Earth Engine"
     });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+
+  }
+  catch (err) {
+    console.error("❌ getWaterNearIndustry ERROR:", err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -111,10 +121,48 @@ exports.askGemini = onRequest(async (req, res) => {
   }
 });
 
-/* =========================
-   PRICE PREDICTION
-========================= */
-exports.predictWaterPrice = onRequest(async (req, res) => {
+//     const prompt = `
+// You are a water trading price expert. Predict a fair market price per KLD (kiloliters per day) for treated water based on the following parameters:
+
+// - Water Quality Grade: ${grade}
+// - Volume Available: ${volume} KLD
+// - pH Level: ${pH}
+// - TDS (Total Dissolved Solids): ${tds} mg/L
+// - BOD (Biochemical Oxygen Demand): ${bod} mg/L
+// - COD (Chemical Oxygen Demand): ${cod} mg/L
+// - Location: ${location}
+
+// Provide ONLY a single number representing the price per KLD in Indian Rupees (₹).
+//     `.trim();
+
+//     const predictedPrice = await runGemini(prompt);
+
+//     const priceMatch = predictedPrice.match(/\d+(\.\d+)?/);
+//     const price = priceMatch ? parseFloat(priceMatch[0]) : 25;
+
+//     res.status(200).json({
+//       success: true,
+//       pricePerKLD: price,
+//       totalPrice: price * volume,
+//       currency: "INR"
+//     });
+
+//   } catch (err) {
+//     console.error("Price Prediction Error:", err);
+/* ---------------- WATER PRICE PREDICTION HANDLER (NEW) ---------------- */
+
+/* ---------------- WATER PRICE PREDICTION HANDLER (NEW) ---------------- */
+
+const predictWaterPrice = async (req, res) => {
+  // ===== CORS =====
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).send("");
+  }
+
   try {
     const { grade, volume } = req.body;
 
@@ -127,6 +175,97 @@ exports.predictWaterPrice = onRequest(async (req, res) => {
       success: true,
       pricePerKLD: price,
       totalPrice: price * volume,
+      currency: "INR"
+    });
+  } catch (err) {
+    console.error("Price Prediction Error:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+};
+
+/* ---------------- CREATE LISTING HANDLER (NEW) ---------------- */
+
+const createListing = async (req, res) => {
+  // ===== CORS =====
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).send("");
+  }
+
+  try {
+    const listingData = req.body;
+
+    // Add to Firestore (assuming db is imported from firebase-admin)
+    const docRef = await db.collection("water_listings").add({
+      ...listingData,
+      status: "available",
+      createdAt: new Date().toISOString()
+    });
+
+    res.status(201).json({
+      success: true,
+      listingId: docRef.id
+    });
+  } catch (err) {
+    console.error("Create Listing Error:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+};
+
+/* ---------------- GET LISTINGS HANDLER (NEW) ---------------- */
+
+const getListings = async (req, res) => {
+  // ===== CORS =====
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).send("");
+  }
+
+  try {
+    const snapshot = await db.collection("water_listings")
+      .where("status", "==", "available")
+      .orderBy("createdAt", "desc")
+      .get();
+
+    const listings = [];
+    snapshot.forEach(doc => {
+      listings.push({ id: doc.id, ...doc.data() });
+    });
+
+    res.status(200).json({
+      success: true,
+      listings
+    });
+  } catch (err) {
+    console.error("Get Listings Error:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+};
+
+/* ---------------- EXPORT ALL ---------------- */
+
+module.exports = {
+  askGemini,
+  getWaterNearIndustry,
+  predictWaterPrice,
+  createListing,
+  getListings,
+};
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -135,7 +274,6 @@ exports.predictWaterPrice = onRequest(async (req, res) => {
 
 /* =========================
    LISTINGS
-========================= */
 exports.createListing = onRequest(async (req, res) => {
   const doc = await db.collection("water_listings").add({
     ...req.body,
