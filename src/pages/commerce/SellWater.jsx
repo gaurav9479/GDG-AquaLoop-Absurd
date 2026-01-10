@@ -21,8 +21,10 @@ export default function SellWater() {
   
   // Form Data
   const [volume, setVolume] = useState("");
-  const [predictedPrice, setPredictedPrice] = useState(null);
+  const [pricePerKLD, setPricePerKLD] = useState("");
   const [description, setDescription] = useState("");
+
+  const totalPrice = volume && pricePerKLD ? (parseFloat(volume) * parseFloat(pricePerKLD)) : 0;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -58,7 +60,10 @@ export default function SellWater() {
   }, [reportId, navigate]);
 
   const handlePredictPrice = async () => {
-    if (!volume || !report) return;
+    if (!volume || !report) {
+      alert("Please enter volume first.");
+      return;
+    }
 
 
     if (!report.inputs?.ph || !report.inputs?.solids) {
@@ -79,7 +84,7 @@ export default function SellWater() {
       });
 
       if (response.data.success) {
-        setPredictedPrice(response.data);
+        setPricePerKLD(response.data.pricePerKLD);
       }
     } catch (error) {
       console.error("Price prediction error:", error);
@@ -90,8 +95,16 @@ export default function SellWater() {
   };
 
   const handleSubmit = async () => {
-    if (!volume || !predictedPrice || !report) {
-      alert("Please fill all required fields and get price prediction");
+    if (!report) {
+      alert("Error: No Water Report selected. Please go back to your dashboard and select a report to sell.");
+      return;
+    }
+    if (!volume) {
+      alert("Please enter the Volume available.");
+      return;
+    }
+    if (!pricePerKLD) {
+      alert("Please enter a Price per KLD.");
       return;
     }
 
@@ -111,10 +124,8 @@ export default function SellWater() {
           conductivity: report.inputs?.conductivity,
         },
         volume: parseFloat(volume),
-        pricePerKLD: predictedPrice.pricePerKLD,
-        totalPrice: predictedPrice.totalPrice,
         pricePerKLD: parseFloat(pricePerKLD),
-        totalPrice: parseFloat(pricePerKLD) * parseFloat(volume),
+        totalPrice: parseFloat(totalPrice),
         currency: "INR",
         location: userProfile?.location,
         industryInfo: {
@@ -127,25 +138,15 @@ export default function SellWater() {
 
       await axios.post("/api/createListing", listingData);
       
-      // Update the original report to mark it as listed
-      // Add status and timestamp
-      const finalListingData = {
-        ...listingData,
-        status: "available",
-        createdAt: new Date().toISOString()
-      };
 
-      await addDoc(collection(db, "water_listings"), finalListingData);
       
 
       await updateDoc(doc(db, "aqualoop_reports", report.id), {
         ecommerceStatus: "listed",
         listedAt: new Date().toISOString(),
         listingDetails: {
-          pricePerKLD: predictedPrice.pricePerKLD,
-          totalPrice: predictedPrice.totalPrice,
           pricePerKLD: parseFloat(pricePerKLD),
-          totalPrice: parseFloat(pricePerKLD) * parseFloat(volume),
+          totalPrice: parseFloat(totalPrice),
           volume: parseFloat(volume)
         }
       });
@@ -241,13 +242,37 @@ export default function SellWater() {
                 type="number"
                 value={volume}
                 onChange={(e) => setVolume(e.target.value)}
-                onBlur={handlePredictPrice}
                 className="w-full px-4 py-3 bg-slate-900/50 border border-aqua-cyan/30 rounded-xl text-white focus:outline-none focus:border-aqua-cyan transition-colors"
                 placeholder="Enter volume in KLD"
               />
             </div>
 
             <div>
+              <label className="text-slate-300 text-sm font-semibold mb-2 block">
+                Price per KLD (₹)
+              </label>
+              <div className="flex gap-2">
+                 <input
+                  type="number"
+                  value={pricePerKLD}
+                  onChange={(e) => setPricePerKLD(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-aqua-cyan/30 rounded-xl text-white focus:outline-none focus:border-aqua-cyan transition-colors"
+                  placeholder="0.00"
+                />
+                <button
+                    onClick={handlePredictPrice}
+                    disabled={predictingPrice || !volume}
+                    className="px-4 py-3 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-xl text-purple-400 font-bold transition-all disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                    title="Get AI Price Suggestion"
+                >
+                    {predictingPrice ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} />}
+                    <span className="hidden sm:inline">AI Price</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          
+           <div className="mb-8">
               <label className="text-slate-300 text-sm font-semibold mb-2 block">
                 Description (Optional)
               </label>
@@ -259,42 +284,31 @@ export default function SellWater() {
                 placeholder="Add any additional details..."
               />
             </div>
-          </div>
 
-          {/* Price Prediction */}
-          {predictingPrice && (
-            <div className="bg-purple-500/10 border border-purple-500/30 rounded-2xl p-6 mb-8 flex items-center gap-3">
-              <Sparkles className="text-purple-400 animate-pulse" size={24} />
-              <span className="text-purple-400 font-semibold">Gemini AI is predicting the best price...</span>
-            </div>
-          )}
-
-          {predictedPrice && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-gradient-to-r from-emerald-500/20 to-aqua-cyan/20 border border-emerald-500/40 rounded-2xl p-8 mb-8"
-            >
+          {/* Pricing Summary */}
+           <div className="bg-gradient-to-r from-emerald-500/20 to-aqua-cyan/20 border border-emerald-500/40 rounded-2xl p-6 mb-8">
               <div className="flex items-center gap-3 mb-4">
                 <TrendingUp className="text-emerald-400" size={28} />
-                <h3 className="text-white font-black text-xl">AI-Predicted Price</h3>
+                <h3 className="text-white font-black text-xl">Pricing Summary</h3>
               </div>
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <p className="text-slate-400 text-sm mb-1">Price per KLD</p>
                   <p className="text-emerald-400 font-black text-3xl">
-                    ₹{predictedPrice.pricePerKLD.toFixed(2)}
+                    ₹{pricePerKLD ? parseFloat(pricePerKLD).toFixed(2) : "0.00"}
                   </p>
                 </div>
                 <div>
                   <p className="text-slate-400 text-sm mb-1">Total Price</p>
                   <p className="text-aqua-cyan font-black text-3xl">
-                    ₹{predictedPrice.totalPrice.toLocaleString()}
+                    ₹{totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
-            </motion.div>
-          )}
+              <p className="text-slate-400 text-xs mt-4">
+                * You can manually adjust the price per KLD or click "AI Price" to get a Gemini-powered market estimate.
+              </p>
+            </div>
 
 
           <div className="flex gap-4">
@@ -306,7 +320,7 @@ export default function SellWater() {
             </button>
             <button
               onClick={handleSubmit}
-              disabled={submitting || !predictedPrice}
+              disabled={submitting || !pricePerKLD || !volume}
               className="flex-1 px-6 py-3 bg-gradient-to-r from-aqua-cyan to-emerald-400 hover:from-aqua-cyan/80 hover:to-emerald-400/80 text-black font-black rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? "Listing..." : "List for Sale"}

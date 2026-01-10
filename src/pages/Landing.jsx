@@ -11,12 +11,14 @@ export default function Landing() {
   const globeEl = useRef();
   const containerRef = useRef(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const { scrollYProgress } = useScroll();
   
+  // 🟢 RESPONSIVE GLOBE STATE
+  const [globeSize, setGlobeSize] = useState(window.innerWidth < 768 ? 400 : 900);
+
+  const { scrollYProgress } = useScroll();
   const smoothY = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
   const globeOpacity = useTransform(smoothY, [0, 0.2, 0.4], [1, 0.8, 0]);
 
-  // Handle background spotlight effect
   const handleMouseMove = (e) => {
     const { clientX, clientY } = e;
     setMousePos({ x: clientX, y: clientY });
@@ -29,13 +31,27 @@ export default function Landing() {
     { lat: 1.3, lng: 103.8, label: 'Water Tech - Singapore', color: '#6366f1' },
   ], []);
 
+  // 🟢 UPDATED RESPONSIVE EFFECT
   useEffect(() => {
+    const handleResize = () => {
+      setGlobeSize(window.innerWidth < 768 ? 400 : 900);
+    };
+
+    window.addEventListener("resize", handleResize);
+
     if (globeEl.current) {
+      const isMobile = window.innerWidth < 768;
       globeEl.current.controls().autoRotate = true;
       globeEl.current.controls().autoRotateSpeed = 0.8;
-      globeEl.current.pointOfView({ altitude: 2.5 });
+      
+      // Altitude 3.5 for mobile (farther out), 2.5 for desktop
+      globeEl.current.pointOfView({ 
+        altitude: isMobile ? 3.5 : 2.5 
+      });
     }
-  }, []);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, [globeSize]);
 
   return (
     <div 
@@ -44,7 +60,7 @@ export default function Landing() {
       className="relative min-h-screen bg-[#020617] text-slate-200 font-sans selection:bg-cyan-500 selection:text-black overflow-x-hidden"
     >
       
-      {/* 🚀 INTERACTIVE BACKGROUND: MOUSE SPOTLIGHT */}
+      {/* BACKGROUND SPOTLIGHT */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div 
           className="absolute inset-0 opacity-20"
@@ -55,7 +71,7 @@ export default function Landing() {
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
       </div>
 
-      {/* --- FLOATING NAVBAR --- */}
+      {/* NAVBAR */}
       <nav className="fixed top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-7xl z-[100] backdrop-blur-2xl border border-white/10 bg-[#020617]/40 rounded-3xl px-8 py-4 flex justify-between items-center shadow-2xl">
         <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-3 group cursor-pointer">
           <div className="bg-cyan-500 p-1.5 rounded-lg shadow-[0_0_15px_rgba(34,211,238,0.5)]">
@@ -64,24 +80,37 @@ export default function Landing() {
           <h1 className="text-sm font-black tracking-tighter uppercase text-white italic font-sans">Aqua<span className="text-cyan-400">Loop</span></h1>
         </motion.div>
         
+        <div className="flex items-center gap-8">
+          {/* Industry Auth */}
+          <div className="flex items-center gap-6 border-r border-white/10 pr-6">
+            <Link to="/login" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors font-mono">
+              Sign In
+            </Link>
+            <Link to="/signup" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors font-mono">
+              Sign Up
+            </Link>
+          </div>
+        </div>
+
+          {/* Marketplace CTA */}
         <div className="flex items-center gap-6">
-          <Link to="/marketplace/login" className="text-[8px] font-black uppercase tracking-[0.3em] text-cyan-400 hover:text-white transition-colors relative group font-mono">
+          <Link to="/marketplace/login" className="hidden sm:block text-[8px] font-black uppercase tracking-[0.3em] text-cyan-400 hover:text-white transition-colors relative group font-mono">
             Marketplace_Access
             <span className="absolute -bottom-1 left-0 w-0 h-[1px] bg-white transition-all group-hover:w-full" />
           </Link>
           <Link to="/login" className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-500 hover:text-cyan-400 transition-colors relative group font-mono">
             Node_Connect
-            <span className="absolute -bottom-1 left-0 w-0 h-[1px] bg-cyan-400 transition-all group-hover:w-full" />
           </Link>
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Link to="/signup" className="bg-white text-black px-5 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-cyan-400 transition-all block shadow-lg font-mono">
-              Launch_Core
+            <Link to="/marketplace" className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all flex items-center gap-2 font-mono">
+              <Droplets size={12} className="fill-current" />
+              Buying Platform
             </Link>
           </motion.div>
         </div>
       </nav>
 
-      {/* --- HERO --- */}
+      {/* HERO */}
       <header className="relative min-h-screen flex flex-col items-center justify-center pt-20 px-6 z-10 text-center">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -110,19 +139,35 @@ export default function Landing() {
             Harnessing proprietary AI diagnostic nodes to close the industrial water loop and maximize resource recovery.
           </p>
           
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-6">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-10">
+            {/* Industry CTA */}
+            <Link to="/signup" className="group relative bg-white/5 border border-white/10 text-white px-8 py-4 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all overflow-hidden flex items-center gap-3 font-mono">
+               <span>Start Selling</span>
+               <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform text-slate-400" />
+            </Link>
+
+            {/* Buyer CTA */}
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-              <Link to="/signup" className="group relative bg-cyan-500 text-[#020617] px-10 py-4 rounded-xl font-black uppercase tracking-[0.3em] text-[9px] overflow-hidden block font-sans">
-                <motion.span className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-full transition-transform duration-500 ease-in-out" />
-                <span className="relative z-10 flex items-center gap-3 tracking-widest">Initialize Protocol <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" /></span>
+              <Link to="/marketplace" className="group relative bg-cyan-500 text-[#020617] px-10 py-4 rounded-xl font-black uppercase tracking-[0.2em] text-[11px] overflow-hidden block font-sans shadow-[0_0_30px_rgba(34,211,238,0.3)]">
+                <span className="relative z-10 flex items-center gap-3">
+                  <Droplets size={16} className="fill-current" />
+                  Buying Platform
+                </span>
+                <motion.div
+                  className="absolute inset-0 bg-white/20"
+                  initial={{ x: '-100%' }}
+                  whileHover={{ x: '100%' }}
+                  transition={{ duration: 0.5 }}
+                />
               </Link>
             </motion.div>
           </div>
         </motion.div>
 
+        {/* 🟢 RESPONSIVE GLOBE CONTAINER */}
         <motion.div 
           style={{ opacity: globeOpacity }} 
-          className="absolute -bottom-60 left-1/2 -translate-x-1/2 pointer-events-none z-[-1] blur-[1px]"
+          className="absolute -bottom-32 md:-bottom-60 left-1/2 -translate-x-1/2 pointer-events-none z-[-1] blur-[0.5px]"
         >
           <Globe
             ref={globeEl}
@@ -136,13 +181,13 @@ export default function Landing() {
             ringsData={industrialNodes}
             ringColor={(d) => d.color}
             ringMaxRadius={12}
-            width={1000}
-            height={1000}
+            width={globeSize}
+            height={globeSize}
           />
         </motion.div>
       </header>
 
-      {/* --- SECTION 2: TELEMETRY TERMINAL (Pain to Cure Logic) --- */}
+      {/* TELEMETRY TERMINAL */}
       <section className="py-24 px-6 relative z-10">
         <motion.div 
            initial={{ opacity: 0, scale: 0.9 }}
@@ -180,9 +225,9 @@ export default function Landing() {
         </motion.div>
       </section>
 
-      {/* --- SECTION 3: FLOW LOGIC (The "Cure" Nodes) --- */}
+      {/* FLOW CARDS */}
       <section className="py-24 px-6 relative z-10">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative">
           <FlowCard icon={<Search size={18}/>} num="01" title="OCR Scanner" desc="Escape the 'Paper Trap'. Digitization of reports to flag legal limit risks." />
           <FlowCard icon={<FlaskConical size={18}/>} num="02" title="Visual Advisor" desc="End 'Blind Treatment'. AI visual chemistry to optimize exact dosing." />
           <FlowCard icon={<Activity size={18}/>} num="03" title="Satellite Watch" desc="Monitor moisture telemetry from space to predict pump dry-out risks." />
@@ -192,15 +237,13 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* --- PROBLEM-ALIGNED FOOTER --- */}
+      {/* FOOTER */}
       <footer className="relative pt-32 pb-16 border-t border-white/5 bg-[#020617] overflow-hidden font-mono">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
         
-        <div className="max-w-7xl mx-auto px-10 grid grid-cols-1 md:grid-cols-4 gap-16 relative z-10">
-          
-          {/* Mission Node: Solving the "Profit Gap" */}
+        <div className="max-w-7xl mx-auto px-10 grid grid-cols-1 md:grid-cols-4 gap-16 relative z-10 text-center md:text-left">
           <div className="space-y-6">
-            <div className="flex items-center gap-2 group cursor-pointer">
+            <div className="flex items-center justify-center md:justify-start gap-2 group cursor-pointer">
                <Droplets className="text-cyan-500 group-hover:rotate-180 transition-transform duration-700" size={18} />
                <span className="text-lg font-black italic uppercase tracking-tighter font-sans text-white">AquaLoop</span>
             </div>
@@ -210,27 +253,13 @@ export default function Landing() {
             </p>
           </div>
           
-          {/* Digital Cure Nodes: Paper Trap & Complexity Wall */}
-          <FooterColumn 
-            title="Quick_Links" 
-            links={["Home", "Dashboard", "Groundwater_Risk_Map"]} 
-          />
+          <FooterColumn title="Quick_Links" links={["Home", "Dashboard", "Groundwater_Risk_Map"]} />
+          <FooterColumn title="Our_Expertise" links={["GroundWater_Level_Alerts", "Sell_Water", "B2B_Maps_Exchange"]} />
 
-          {/* Crisis Prevention: Groundwater & Profit Gap */}
-          <FooterColumn 
-            title="Our_Expertise" 
-            links={["GroundWater_Level_Alerts", "Sell_Water", "B2B_Maps_Exchange"]} 
-          />
-
-          {/* Telemetry Input */}
           <div className="space-y-6">
             <h5 className="text-[8px] font-black text-cyan-500 uppercase tracking-[0.5em]">Network_Gateway</h5>
             <div className="relative group">
-               <input 
-                  type="text" 
-                  placeholder="ENTER_NODE_AUTH" 
-                  className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-[8px] font-mono outline-none focus:border-cyan-500 transition-all uppercase tracking-widest text-cyan-200" 
-               />
+               <input type="text" placeholder="ENTER_NODE_AUTH" className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-[8px] font-mono outline-none focus:border-cyan-500 transition-all uppercase tracking-widest text-cyan-200" />
                <motion.button whileHover={{ scale: 1.1, x: 3 }} className="absolute right-4 top-1/2 -translate-y-1/2 text-cyan-500">
                   <Zap size={14} />
                </motion.button>
@@ -238,11 +267,10 @@ export default function Landing() {
           </div>
         </div>
         
-        {/* Bottom Bar: System Status */}
         <div className="max-w-7xl mx-auto px-10 mt-24 flex flex-col md:flex-row justify-between items-center gap-8 border-t border-white/5 pt-10 text-[8px] font-black uppercase tracking-[0.4em] text-slate-800">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col md:flex-row items-center gap-4">
               <p>© 2026 ICIS_AQUALOOP_RECOVERY</p>
-              <span className="h-1 w-1 bg-slate-800 rounded-full" />
+              <span className="hidden md:block h-1 w-1 bg-slate-800 rounded-full" />
               <p className="text-slate-900 tracking-tighter uppercase">Circular_Economy_Active</p>
             </div>
             <div className="flex items-center gap-6">
@@ -258,7 +286,7 @@ export default function Landing() {
   );
 }
 
-/* --- REUSABLE COMPONENTS --- */
+/* --- HELPERS --- */
 
 function TypewriterText({ text }) {
   const [displayedText, setDisplayedText] = useState("");
@@ -284,14 +312,10 @@ function FlowCard({ icon, num, title, desc }) {
       <div className="absolute -right-4 -top-4 text-[#ffffff02] font-black text-[6rem] leading-none pointer-events-none group-hover:text-cyan-500/[0.05] transition-all duration-700">
         {num}
       </div>
-      <div className="relative mb-8">
-         <motion.div 
-           whileHover={{ rotate: 360 }}
-           transition={{ duration: 0.8 }}
-           className="relative w-12 h-12 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-center text-cyan-400 group-hover:border-cyan-400/30 transition-all shadow-inner"
-         >
+      <div className="relative mb-8 text-cyan-400">
+         <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-center group-hover:border-cyan-400/30 transition-all shadow-inner">
             {icon}
-         </motion.div>
+         </div>
       </div>
       <h4 className="text-white font-black uppercase tracking-[0.2em] text-[10px] mb-3 italic group-hover:text-cyan-400 transition-colors">{title}</h4>
       <p className="text-slate-600 text-[9px] font-black uppercase tracking-widest leading-loose opacity-70 group-hover:opacity-100 transition-opacity">{desc}</p>
@@ -303,7 +327,7 @@ function FooterColumn({ title, links }) {
   return (
     <div className="space-y-6">
       <h5 className="text-[8px] font-black text-cyan-500 uppercase tracking-[0.5em]">{title}</h5>
-      <div className="flex flex-col gap-3 text-[8px] font-black uppercase tracking-[0.3em] text-slate-600 font-mono">
+      <div className="flex flex-col gap-3 text-[8px] font-black uppercase tracking-[0.3em] text-slate-600 font-mono text-center md:text-left">
          {links.map(link => (
            <motion.a key={link} href="#" whileHover={{ x: 5, color: '#22d3ee' }} className="transition-all">{link}</motion.a>
          ))}
