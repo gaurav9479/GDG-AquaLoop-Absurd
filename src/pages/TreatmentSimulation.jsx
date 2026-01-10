@@ -7,19 +7,14 @@ import {
   Activity,
   Droplets,
   Factory,
-  Play,
-  Settings2,
-  Database,
-  RefreshCcw,
-  FlaskConical,
   Beaker,
-  ShieldCheck,
+  FlaskConical,
   Waves,
   Thermometer,
   CloudRain,
-  Edit3
+  Edit3,
+  Database
 } from "lucide-react";
-
 
 import { auth, db } from "../services/firebase";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
@@ -63,7 +58,6 @@ const PARAM_METADATA = [
 ];
 
 /* ---------------- FIREBASE SAVE ---------------- */
-console.log("Auth user at save time:", auth.currentUser);
 
 const saveSimulationForUser = async ({
   industry,
@@ -79,18 +73,13 @@ const saveSimulationForUser = async ({
       return;
     }
 
-    console.log("saveSimulationForUser called for UID:", user.uid);
-
-    await addDoc(
-      collection(db, "users", user.uid, "simulations"),
-      {
-        industry,
-        manualIndustryName: manualIndustryName || null,
-        influent,
-        stages: results,
-        createdAt: Timestamp.now(),
-      }
-    );
+    await addDoc(collection(db, "users", user.uid, "simulations"), {
+      industry,
+      manualIndustryName: manualIndustryName || null,
+      influent,
+      stages: results,
+      createdAt: Timestamp.now()
+    });
 
     console.log("Simulation successfully saved to Firestore.");
 
@@ -98,7 +87,6 @@ const saveSimulationForUser = async ({
     console.error("Error saving simulation to Firestore:", error);
   }
 };
-
 
 /* ---------------- COMPONENT ---------------- */
 
@@ -117,13 +105,14 @@ const TreatmentSimulation = () => {
   }, [industry]);
 
   useEffect(() => {
-  const unsub = onAuthStateChanged(auth, (user) => {
-    console.log("🔥 AUTH STATE CHANGED");
-    console.log("LOGGED IN UID:", user?.uid);
-    console.log("LOGGED IN EMAIL:", user?.email);
-  });
-  return () => unsub();
-}, []);
+    const unsub = onAuthStateChanged(auth, (user) => {
+      console.log("🔥 AUTH STATE CHANGED");
+      console.log("LOGGED IN UID:", user?.uid);
+      console.log("LOGGED IN EMAIL:", user?.email);
+    });
+
+    return () => unsub();
+  }, []);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -131,17 +120,17 @@ const TreatmentSimulation = () => {
 
   const runSimulation = async () => {
     console.log("🚀 RUN SIMULATION CLICKED");
-  console.log("LOGGED IN UID:", auth.currentUser?.uid);
-  console.log("LOGGED IN EMAIL:", auth.currentUser?.email);
+    console.log("LOGGED IN UID:", auth.currentUser?.uid);
 
-    const finalIndustryLabel = industry === "manual" ? manualIndustryName : industry;
+    const finalIndustryLabel =
+      industry === "manual" ? manualIndustryName : industry;
 
     if (industry === "manual" && !manualIndustryName.trim()) {
       setError("SPECIFY INDUSTRY CONTEXT");
       return;
     }
 
-    if (Object.values(form).some(v => v === "")) {
+    if (Object.values(form).some((v) => v === "")) {
       setError("Incomplete Sensor Data.");
       return;
     }
@@ -181,24 +170,27 @@ const TreatmentSimulation = () => {
         results: history
       });
 
-    } catch {
+    } catch (err) {
+      console.error("❌ Simulation Error:", err);
       setError("Simulation Engine Offline.");
-      
+
       const user = auth.currentUser;
       if (user) {
         await addDoc(collection(db, "users", user.uid, "simulations"), {
-          industry, manualIndustryName: manualIndustryName || null,
-          influent: form, stages: history, createdAt: Timestamp.now()
+          industry,
+          manualIndustryName: manualIndustryName || null,
+          influent: form,
+          stages: history,
+          createdAt: Timestamp.now()
         });
       }
-    } catch {
-      setError("ENGINE_LINK_OFFLINE");
+
     } finally {
       setLoading(false);
     }
   };
 
-  /* ---------------- JSX (FULL UI) ---------------- */
+  /* ---------------- JSX ---------------- */
 
   return (
     <div className="w-full space-y-2 animate-in fade-in duration-500">
@@ -240,7 +232,7 @@ const TreatmentSimulation = () => {
             />
           )}
 
-          {PARAM_METADATA.map(p => (
+          {PARAM_METADATA.map((p) => (
             <input
               key={p.id}
               name={p.id}
