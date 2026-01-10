@@ -8,5 +8,6 @@ motor
 dnspython
 google-generativeai
 python-dotenv
+requests
 
 

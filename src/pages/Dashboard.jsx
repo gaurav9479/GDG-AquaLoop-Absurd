@@ -31,7 +31,8 @@ import {
 import { KPICard } from "../layout/KpiCard";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE = "http://localhost:8080"; // FastAPI backend
+const API_BASE = import.meta.env.VITE_API_BASE;
+
 
 const DashBoard = () => {
   const navigate = useNavigate();
