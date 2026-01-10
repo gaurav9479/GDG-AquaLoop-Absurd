@@ -23,7 +23,6 @@ import { useNavigate } from "react-router-dom";
 
 const DashBoard = () => {
   const navigate = useNavigate();
-
   const [reports, setReports] = useState([]);
   const [latestReport, setLatestReport] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -203,7 +202,7 @@ const DashBoard = () => {
         <KPICard title="System Trust" value={`${latestReport?.confidence || 98.4}%`} icon={<ShieldCheck className="text-aqua-cyan"/>} />
       </div>
 
-      {/* ================= SELL BUTTON ================= */}
+
       {latestReport && (
         <div className="flex justify-center">
           <button
@@ -216,7 +215,6 @@ const DashBoard = () => {
         </div>
       )}
 
-      {/* ================= GRID SECTION ================= */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
         {/* RECOVERY DISTRIBUTION */}

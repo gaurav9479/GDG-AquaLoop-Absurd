@@ -10,11 +10,15 @@ import AuthMiddleware from "./middleware/AuthMiddleware";
 import IndustryProfileForm from "./pages/IndustryProfileForm";
 import TreatmentSimulation from "./pages/TreatmentSimulation";
 import Landing from "./pages/Landing";
+import WaterRiskMap from "./pages/WaterRiskMap";
 import SellWater from "./pages/commerce/SellWater";
 import BuyerDashboard from "./pages/commerce/BuyerDashboard";
 import MyWaterReports from "./pages/commerce/MyWaterReports";
 import SellerOrders from "./pages/commerce/SellerOrders";
 import UserOrders from "./pages/commerce/UserOrders";
+import MarketplaceLayout from "./layout/MarketplaceLayout";
+import BuyerLogin from "./pages/commerce/auth/BuyerLogin";
+import BuyerSignup from "./pages/commerce/auth/BuyerSignup";
 
 export default function App() {
   return (
@@ -31,9 +35,16 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
 
+          {/* 🛍️ Marketplace Routes (Independent Layout) */}
+          <Route element={<MarketplaceLayout />}>
+             <Route path="/marketplace" element={<BuyerDashboard />} />
+             <Route path="/marketplace/orders/buyer" element={<UserOrders />} />
+             <Route path="/marketplace/login" element={<BuyerLogin />} />
+             <Route path="/marketplace/signup" element={<BuyerSignup />} />
+          </Route>
+
           {/* 🔐 Protected Routes */}
           <Route element={<AuthMiddleware />}> 
-
 
             <Route
               path="/industry/profile"

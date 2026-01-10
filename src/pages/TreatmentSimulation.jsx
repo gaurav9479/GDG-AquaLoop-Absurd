@@ -20,37 +20,36 @@ import {
   Edit3
 } from "lucide-react";
 
-/* ✅ CORRECT FIREBASE IMPORT */
+
 import { auth, db } from "../services/firebase";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 
 /* ---------------- CONSTANTS ---------------- */
 
-
 const INDUSTRY_PROFILES = {
   textile: {
     label: "Textile Processing",
-    icon: <CloudRain size={16} />,
+    icon: <CloudRain size={14} />,
     defaults: { bod: "420", cod: "760", ph: "5.6", turbidity: "180", tss: "360" }
   },
   food: {
     label: "Food & Beverage",
-    icon: <Beaker size={16} />,
+    icon: <Beaker size={14} />,
     defaults: { bod: "1100", cod: "2100", ph: "4.8", turbidity: "400", tss: "750" }
   },
   chemical: {
     label: "Chemical Plant",
-    icon: <FlaskConical size={16} />,
+    icon: <FlaskConical size={14} />,
     defaults: { bod: "350", cod: "1800", ph: "3.2", turbidity: "120", tss: "250" }
   },
   municipal: {
     label: "Municipal Site",
-    icon: <Factory size={16} />,
+    icon: <Factory size={14} />,
     defaults: { bod: "220", cod: "480", ph: "7.1", turbidity: "60", tss: "280" }
   },
   manual: {
     label: "Manual Entry",
-    icon: <Edit3 size={16} />,
+    icon: <Edit3 size={14} />,
     defaults: { bod: "", cod: "", ph: "", turbidity: "", tss: "" }
   }
 };
@@ -138,7 +137,7 @@ const TreatmentSimulation = () => {
     const finalIndustryLabel = industry === "manual" ? manualIndustryName : industry;
 
     if (industry === "manual" && !manualIndustryName.trim()) {
-      setError("Please specify the Manual Industry Name.");
+      setError("SPECIFY INDUSTRY CONTEXT");
       return;
     }
 
@@ -184,6 +183,16 @@ const TreatmentSimulation = () => {
 
     } catch {
       setError("Simulation Engine Offline.");
+      
+      const user = auth.currentUser;
+      if (user) {
+        await addDoc(collection(db, "users", user.uid, "simulations"), {
+          industry, manualIndustryName: manualIndustryName || null,
+          influent: form, stages: history, createdAt: Timestamp.now()
+        });
+      }
+    } catch {
+      setError("ENGINE_LINK_OFFLINE");
     } finally {
       setLoading(false);
     }

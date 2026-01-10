@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { auth, db } from "../../services/firebase";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, addDoc, collection } from "firebase/firestore";
 import axios from "axios";
 import { Droplets, TrendingUp, MapPin, Factory, Loader2, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
@@ -41,7 +41,7 @@ export default function SellWater() {
           }
         }
 
-        // Fetch user profile
+
         const userSnap = await getDoc(doc(db, "users", user.uid));
         if (userSnap.exists()) {
           setUserProfile(userSnap.data());
@@ -60,7 +60,7 @@ export default function SellWater() {
   const handlePredictPrice = async () => {
     if (!volume || !report) return;
 
-    // Validate that we have actual data, not defaults
+
     if (!report.inputs?.ph || !report.inputs?.solids) {
       alert("Report data incomplete. Cannot predict price.");
       return;
@@ -113,6 +113,8 @@ export default function SellWater() {
         volume: parseFloat(volume),
         pricePerKLD: predictedPrice.pricePerKLD,
         totalPrice: predictedPrice.totalPrice,
+        pricePerKLD: parseFloat(pricePerKLD),
+        totalPrice: parseFloat(pricePerKLD) * parseFloat(volume),
         currency: "INR",
         location: userProfile?.location,
         industryInfo: {
@@ -126,12 +128,24 @@ export default function SellWater() {
       await axios.post("/api/createListing", listingData);
       
       // Update the original report to mark it as listed
+      // Add status and timestamp
+      const finalListingData = {
+        ...listingData,
+        status: "available",
+        createdAt: new Date().toISOString()
+      };
+
+      await addDoc(collection(db, "water_listings"), finalListingData);
+      
+
       await updateDoc(doc(db, "aqualoop_reports", report.id), {
         ecommerceStatus: "listed",
         listedAt: new Date().toISOString(),
         listingDetails: {
           pricePerKLD: predictedPrice.pricePerKLD,
           totalPrice: predictedPrice.totalPrice,
+          pricePerKLD: parseFloat(pricePerKLD),
+          totalPrice: parseFloat(pricePerKLD) * parseFloat(volume),
           volume: parseFloat(volume)
         }
       });
@@ -217,8 +231,8 @@ export default function SellWater() {
             </div>
           )}
 
-          {/* Volume Input */}
-          <div className="space-y-6 mb-8">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
             <div>
               <label className="text-slate-300 text-sm font-semibold mb-2 block">
                 Volume Available (KLD)
@@ -282,7 +296,7 @@ export default function SellWater() {
             </motion.div>
           )}
 
-          {/* Actions */}
+
           <div className="flex gap-4">
             <button
               onClick={() => navigate("/dashboard")}

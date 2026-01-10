@@ -5,6 +5,7 @@ import {
   BarChart3, 
   Brain,
   Activity,
+  Radar,
   Settings, 
   LogOut,
   ShoppingCart,
@@ -44,12 +45,13 @@ export default function Sidebar({ onLogout }) {
       </div>
 
       {/* Navigation Links */}
-      <nav className="flex-1 space-y-2">
+      <nav className="flex-1 space-y-2 overflow-y-auto pr-2 aqua-scrollbar">
         <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
         <NavItem to="/scanner" icon={ScanLine} label="Scanner" />
         <NavItem to="/trends" icon={BarChart3} label="Analytics" />
         <NavItem to="/predict" icon={Brain} label="Predict" />
         <NavItem to="/predict-stage" icon={Activity} label="Treatment Simulation" />
+        <NavItem to="/water-risk-map" icon={Radar} label="Water Risk Map" />
 
         {/* Commerce Section */}
         <div className="pt-4 mt-4 border-t border-aqua-border/30">
@@ -65,8 +67,19 @@ export default function Sidebar({ onLogout }) {
           <NavItem to="/commerce/orders/seller" icon={ClipboardList} label="Sales Orders" />
         </div>
 
-
-
+        {/* Commerce Section */}
+        <div className="pt-4 mt-4 border-t border-aqua-border/30">
+          <div className="px-4 mb-3">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+              Water Commerce
+            </span>
+          </div>
+          <NavItem to="/commerce/reports" icon={FileText} label="My Reports" />
+          <NavItem to="/commerce/sell" icon={Store} label="Sell Water" />
+          <NavItem to="/commerce/buy" icon={ShoppingCart} label="Buy Water" />
+          <NavItem to="/commerce/orders/buyer" icon={Package} label="My Purchases" />
+          <NavItem to="/commerce/orders/seller" icon={ClipboardList} label="Sales Orders" />
+        </div>
       </nav>
 
       {/* Footer / User Section */}
