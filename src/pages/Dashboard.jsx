@@ -1,83 +1,50 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-
 import { auth, db } from "../services/firebase";
+import { collection, query, orderBy, where, onSnapshot } from "firebase/firestore";
 import {
-  collection,
-  query,
-  orderBy,
-  where,
-  onSnapshot,
-} from "firebase/firestore";
-
-import {
-  Activity,
-  ShieldCheck,
-  Droplets,
-  Cpu,
-  BrainCircuit,
-  Loader2,
-  HelpCircle,
+  Activity, ShieldCheck, Droplets, Cpu, BrainCircuit,
+  Loader2, HelpCircle, ArrowUpRight, History
 } from "lucide-react";
-
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  Legend,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  CartesianGrid, Legend
 } from "recharts";
-
-import KPICard from "../layout/KpiCard";
+import { KPICard } from "../layout/KpiCard";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
 const Dashboard = () => {
   const navigate = useNavigate();
-
   const [reports, setReports] = useState([]);
   const [latestReport, setLatestReport] = useState(null);
   const [genaiInsight, setGenaiInsight] = useState("");
   const [genaiLoading, setGenaiLoading] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  /* =========================
-     FIRESTORE LISTENER
-  ========================= */
   useEffect(() => {
     const unsubAuth = auth.onAuthStateChanged((user) => {
       if (!user) return;
-
       const q = query(
         collection(db, "aqualoop_reports"),
         where("userId", "==", user.uid),
         orderBy("timestamp", "desc")
       );
-
       const unsub = onSnapshot(q, (snap) => {
         const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setReports(data);
-
         if (data.length > 0) {
           setLatestReport(data[0]);
           fetchGenAIInsight(data[0]);
         }
         setLoading(false);
       });
-
       return () => unsub();
     });
-
     return () => unsubAuth();
   }, []);
 
-  /* =========================
-     GENAI (FALLBACK SAFE)
-  ========================= */
   const fetchGenAIInsight = async (report) => {
     try {
       setGenaiLoading(true);
@@ -88,106 +55,124 @@ const Dashboard = () => {
       });
       setGenaiInsight(res.data.insight);
     } catch {
-      setGenaiInsight(
-        "AI insights are currently quota-limited. Showing rule-based sustainability recommendation."
-      );
+      setGenaiInsight("AI insights are currently limited. Optimize BOD/COD levels to improve water grade.");
     } finally {
       setGenaiLoading(false);
     }
   };
 
-  /* =========================
-     CHART DATA
-  ========================= */
   const chartData = useMemo(() => {
     const map = {};
     reports.forEach((r) => {
-      const date = r.timestamp?.toDate().toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
+      const date = r.timestamp?.toDate().toLocaleDateString("en-US", { month: "short", day: "numeric" });
       if (!date) return;
       if (!map[date]) map[date] = { date, A: 0, B: 0, C: 0, D: 0 };
       map[date][r.predicted_grade || "D"] += r.volume || 0;
     });
-    return Object.values(map).reverse();
+    return Object.values(map).reverse().slice(-7); // Last 7 entries
   }, [reports]);
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-black">
-        <Loader2 className="animate-spin text-aqua-cyan" />
+      <div className="h-screen flex flex-col gap-4 items-center justify-center bg-black">
+        <Loader2 className="animate-spin text-aqua-cyan" size={40} />
+        <p className="text-aqua-cyan font-mono text-xs tracking-widest uppercase">Initializing Neural Link...</p>
       </div>
     );
   }
 
   return (
-    <div className="p-10 space-y-10 max-w-7xl mx-auto">
-      {/* KPI */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <KPICard
-          title="Accumulated Volume"
-          value={`${reports.reduce((a, b) => a + (b.volume || 0), 0)} L`}
-          icon={<Droplets />}
-        />
-        <KPICard
-          title="Last Grade"
-          value={latestReport?.predicted_grade || "N/A"}
-          icon={<Activity />}
-        />
-        <KPICard
-          title="AI Status"
-          value={genaiLoading ? "Analyzing…" : "Synced"}
-          icon={<Cpu />}
-        />
-        <KPICard
-          title="System Trust"
-          value={`${latestReport?.confidence || 98.4}%`}
-          icon={<ShieldCheck />}
-        />
-      </div>
-
-      {/* SELL BUTTON */}
-      <div className="flex justify-center">
-        <button
-          onClick={() => navigate("/commerce/reports")}
-          className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-aqua-cyan/20 to-emerald-400/20 border border-aqua-cyan/40 rounded-2xl"
+    <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto animate-in fade-in duration-700">
+      
+      {/* HEADER / WELCOME */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-white tracking-tight">OPERATIONAL <span className="text-aqua-cyan">DASHBOARD</span></h1>
+          <p className="text-slate-400 text-sm">Real-time water quality monitoring and AI predictive analysis.</p>
+        </div>
+        <button 
+          onClick={() => navigate("/scanner")}
+          className="bg-aqua-cyan text-black font-bold px-6 py-2 rounded-full text-sm hover:bg-white transition-all flex items-center gap-2"
         >
-          <HelpCircle size={22} />
-          <span className="font-bold">Want to sell this water?</span>
+          New Analysis <ArrowUpRight size={16}/>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* CHART */}
-        <div className="lg:col-span-2 bg-aqua-surface/30 rounded-3xl p-8">
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData}>
-              <CartesianGrid stroke="#1e293b" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="A" fill="#22c55e" />
-              <Bar dataKey="B" fill="#00f2ff" />
-              <Bar dataKey="C" fill="#f59e0b" />
-              <Bar dataKey="D" fill="#ef4444" />
+      {/* KPI GRID */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard title="Total Volume" value={`${reports.reduce((a, b) => a + (b.volume || 0), 0).toLocaleString()} L`} icon={<Droplets className="text-blue-400"/>} />
+        <KPICard title="Current Grade" value={latestReport?.predicted_grade || "N/A"} icon={<Activity className="text-emerald-400"/>} />
+        <KPICard title="AI Engine" value={genaiLoading ? "Analysing" : "Standby"} icon={<Cpu className="text-purple-400"/>} />
+        <KPICard title="Confidence" value={`${latestReport?.confidence || 98.4}%`} icon={<ShieldCheck className="text-aqua-cyan"/>} />
+      </div>
+
+      {/* MID SECTION: CHART & INSIGHTS */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* CHART CONTAINER */}
+        <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800 rounded-3xl p-6 shadow-2xl backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+              <History size={14} /> Volume Distribution per Grade
+            </h3>
+            <div className="flex gap-2">
+              <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500"></div><span className="text-[10px] text-slate-400">A</span></div>
+              <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-aqua-cyan"></div><span className="text-[10px] text-slate-400">B</span></div>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+              <Tooltip 
+                cursor={{fill: 'rgba(255,255,255,0.05)'}}
+                contentStyle={{backgroundColor: '#0f172a', borderRadius: '12px', border: '1px solid #334155'}}
+              />
+              <Bar dataKey="A" stackId="a" fill="#22c55e" radius={[4, 4, 0, 0]} barSize={35} />
+              <Bar dataKey="B" stackId="a" fill="#00f2ff" barSize={35} />
+              <Bar dataKey="C" stackId="a" fill="#f59e0b" barSize={35} />
+              <Bar dataKey="D" stackId="a" fill="#ef4444" barSize={35} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* GENAI OUTPUT */}
-        <div className="bg-aqua-surface/60 rounded-3xl p-8 max-h-[320px] overflow-y-auto">
-          <div className="flex items-center gap-3 mb-4">
-            <BrainCircuit />
-            <h3 className="text-sm font-bold">AI Sustainability Insight</h3>
+        {/* AI INSIGHT CARD */}
+        <div className="bg-gradient-to-b from-slate-900/80 to-slate-900/40 border border-slate-800 rounded-3xl p-6 flex flex-col">
+          <div className="flex items-center gap-3 mb-4 text-aqua-cyan">
+            <BrainCircuit size={20} />
+            <h3 className="text-sm font-bold tracking-tight text-white uppercase">Neural Insights</h3>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+            {genaiLoading ? (
+              <div className="space-y-3">
+                <div className="h-4 w-3/4 bg-slate-800 rounded animate-pulse"></div>
+                <div className="h-4 w-full bg-slate-800 rounded animate-pulse delay-75"></div>
+                <div className="h-4 w-5/6 bg-slate-800 rounded animate-pulse delay-150"></div>
+              </div>
+            ) : (
+              <p className="text-slate-300 text-sm leading-relaxed font-light italic">
+                "{genaiInsight}"
+              </p>
+            )}
           </div>
 
-          {genaiLoading ? (
-            <Loader2 className="animate-spin" />
-          ) : (
-            <p className="text-sm whitespace-pre-wrap">{genaiInsight}</p>
-          )}
+          <div className="mt-6 pt-6 border-t border-slate-800">
+             <button 
+              onClick={() => navigate("/commerce/reports")}
+              className="w-full group flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-aqua-cyan/10 hover:border-aqua-cyan/40 transition-all"
+             >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-aqua-cyan/20 rounded-lg text-aqua-cyan"><HelpCircle size={18}/></div>
+                  <div className="text-left">
+                    <p className="text-xs font-bold text-white">Water Commerce</p>
+                    <p className="text-[10px] text-slate-500">Sell treated inventory</p>
+                  </div>
+                </div>
+                <ArrowUpRight size={18} className="text-slate-600 group-hover:text-aqua-cyan transition-colors" />
+             </button>
+          </div>
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+
 const axios = require("axios");
 const admin = require("firebase-admin");
 const { onRequest } = require("firebase-functions/v2/https");
@@ -154,4 +155,3 @@ exports.getListings = onRequest(async (req, res) => {
     listings: snap.docs.map(d => ({ id: d.id, ...d.data() }))
   });
 });
-
