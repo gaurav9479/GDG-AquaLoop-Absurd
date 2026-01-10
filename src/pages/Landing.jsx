@@ -90,6 +90,7 @@ export default function Landing() {
               Sign Up
             </Link>
           </div>
+        </div>
 
           {/* Marketplace CTA */}
         <div className="flex items-center gap-6">

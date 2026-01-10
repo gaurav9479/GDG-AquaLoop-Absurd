@@ -50,8 +50,6 @@ function getWaterDataNearLocation(lat, lng) {
   });
 }
 
- =========================
-   WATER AVAILABILITY
 exports.getWaterNearIndustry = onRequest(async (req, res) => {
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Headers", "Content-Type");
@@ -266,11 +264,7 @@ module.exports = {
   createListing,
   getListings,
 };
-    });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
+    
 
 /* =========================
    LISTINGS
@@ -292,4 +286,4 @@ exports.getListings = onRequest(async (req, res) => {
   res.json({
     listings: snap.docs.map(d => ({ id: d.id, ...d.data() }))
   });
-});
+});*/
