@@ -1,21 +1,23 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
 from datetime import datetime
-import numpy as np
-import joblib
 import os
-import random
-import pandas as pd
+import requests
+from dotenv import load_dotenv
 
-# -----------------------
+# ===============================
+# ENV
+# ===============================
+load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# ===============================
 # APP INIT
-# -----------------------
-app = FastAPI(title="AquaLoop ML Service")
+# ===============================
+app = FastAPI(title="AquaLoop GenAI Service")
 
-# -----------------------
-# CORS
-# -----------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,139 +26,96 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# -----------------------
-# MODEL PATHS
-# -----------------------
-MODEL_PATH = os.path.join("model", "water_model.pkl")
-TREATMENT_MODEL_PATH = os.path.join("model", "treatment_model.pkl")
-
-# -----------------------
-# LOAD MODELS
-# -----------------------
-try:
-    water_model = joblib.load(MODEL_PATH)
-except Exception as e:
-    raise RuntimeError(f"Water model load failed: {e}")
-
-try:
-    treatment_model = joblib.load(TREATMENT_MODEL_PATH)
-except Exception as e:
-    raise RuntimeError(f"Treatment model load failed: {e}")
-
-# -----------------------
-# HEALTH CHECK
-# -----------------------
+# ===============================
+# HEALTH
+# ===============================
 @app.get("/")
 def health():
-    return {"status": "AquaLoop ML service running ✅"}
+    return {"status": "GenAI service running ✅"}
 
-# =====================================================
-# 1️⃣ WATER QUALITY PREDICTION (A / B / C)
-# =====================================================
-@app.post("/predict")
-def predict(data: dict):
-    try:
-        features = np.array([[ 
-            float(data["ph"]),
-            float(data["hardness"]),
-            float(data["solids"]),
-            float(data["chloramines"]),
-            float(data["sulfate"]),
-            float(data["conductivity"]),
-            float(data["organic_carbon"]),
-            float(data["trihalomethanes"]),
-            float(data["turbidity"]),
-        ]])
+# ===============================
+# REQUEST MODEL
+# ===============================
+class GeminiRequest(BaseModel):
+    predicted_grade: str
+    inputs: dict
+    industry_type: Optional[str] = "General"
 
-        grade = str(water_model.predict(features)[0]).upper()
+# ===============================
+# GENAI INSIGHT (🔥 WORKING)
+# ===============================
+@app.post("/genai/insight")
+def genai_insight(data: GeminiRequest):
 
-        reuse_allowed = grade in ["A", "B"]
-
-        applications = {
-            "A": ["Drinking", "Agriculture", "Gardening", "Construction"],
-            "B": ["Agriculture", "Gardening", "Construction"],
-            "C": ["Industrial use only"]
-        }.get(grade, [])
-
+    if not GEMINI_API_KEY:
         return {
-            "predicted_grade": grade,
-            "reuse_allowed": reuse_allowed,
-            "applications": applications
+            "insight": "AI unavailable. Secondary treatment recommended before reuse.",
+            "model": "fallback",
+            "generatedAt": datetime.utcnow().isoformat(),
         }
 
-    except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Missing field: {e}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    url = (
+        "https://generativelanguage.googleapis.com/"
+        "v1/models/gemini-2.0-flash:generateContent"
+    )
 
-# =====================================================
-# 2️⃣ TREATMENT STAGE SIMULATION
-# =====================================================
-@app.post("/treatment/predict-stage")
-def predict_treatment_stage(data: dict):
+    prompt = f"""
+You are a water sustainability and environmental compliance expert.
+
+Water Quality Grade: {data.predicted_grade}
+Industry Type: {data.industry_type}
+
+Water Parameters:
+{data.inputs}
+
+Provide:
+1. Reuse recommendation
+2. Compliance & safety note
+3. Environmental impact insight
+4. Suggested next treatment step
+"""
+
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": prompt}
+                ]
+            }
+        ]
+    }
+
     try:
-        df = pd.DataFrame(
-            [[
-                float(data["bod"]),
-                float(data["cod"]),
-                float(data["ph"]),
-                float(data["turbidity"]),
-                float(data["tss"]),
-                data["industry_type"],
-                data["treatment_stage"]
-            ]],
-            columns=[
-                "bod", "cod", "ph",
-                "turbidity", "tss",
-                "industry_type", "treatment_stage"
-            ]
+        response = requests.post(
+            f"{url}?key={GEMINI_API_KEY}",
+            headers={"Content-Type": "application/json"},
+            json=payload,
+            timeout=30
         )
 
-        prediction = treatment_model.predict(df)[0]
+        if response.status_code != 200:
+            return {
+                "insight": "AI insight generation failed due to API error.",
+                "model": "fallback",
+                "generatedAt": datetime.utcnow().isoformat(),
+                "error": response.text,
+            }
+
+        result = response.json()
+        text = result["candidates"][0]["content"]["parts"][0]["text"]
 
         return {
-            "bod": round(float(prediction[0]), 2),
-            "cod": round(float(prediction[1]), 2),
-            "ph": round(float(prediction[2]), 2),
-            "turbidity": round(float(prediction[3]), 2),
-            "tss": round(float(prediction[4]), 2),
+            "insight": text,
+            "model": "gemini-2.0-flash",
+            "generatedAt": datetime.utcnow().isoformat(),
         }
 
-    except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Missing field: {e}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "insight": "AI insight generation failed. Secondary treatment recommended.",
+            "model": "fallback",
+            "generatedAt": datetime.utcnow().isoformat(),
+            "error": str(e),
+        }
 
-# =====================================================
-# 3️⃣ GROUNDWATER STRESS ANALYSIS (API-DRIVEN)
-# =====================================================
-class GroundwaterRequest(BaseModel):
-    lat: float
-    lng: float
 
-@app.post("/groundwater/analyze")
-def analyze_groundwater(data: GroundwaterRequest):
-    """
-    API-driven groundwater stress analysis.
-    Logic can be replaced later with:
-    - CGWB datasets
-    - GRACE satellite data
-    - Government open APIs
-    """
-
-    decline_rate = round(random.uniform(0.4, 2.0), 2)
-
-    if decline_rate > 1.5:
-        stress = "HIGH"
-    elif decline_rate > 0.8:
-        stress = "MEDIUM"
-    else:
-        stress = "LOW"
-
-    return {
-        "stressLevel": stress,
-        "declineRate_m_per_year": decline_rate,
-        "confidence": round(random.uniform(85, 98), 1),
-        "dataSource": "Simulated · API-ready",
-        "timestamp": datetime.utcnow().isoformat()
-    }
