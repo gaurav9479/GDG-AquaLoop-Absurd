@@ -5,7 +5,7 @@ const admin = require("firebase-admin");
 const { onRequest } = require("firebase-functions/v2/https");
 
 const ee = require("@google/earthengine");
-const serviceAccount = require("../service-account.json"); // ⚠️ rotate later, keep safe
+const serviceAccount = require("../service-account.json");
 
 const db = admin.firestore();
 
@@ -58,9 +58,7 @@ function getWaterDataNearLocation(lat, lng) {
   });
 }
 
-/* =========================
-   WATER NEAR INDUSTRY HANDLER
-========================= */
+
 
 const getWaterNearIndustry = async (req, res) => {
 
@@ -79,17 +77,9 @@ const getWaterNearIndustry = async (req, res) => {
       return res.status(503).json({
         success: false,
         message: "Earth Engine not initialized yet, try again"
-    const { prompt, docId, updatefield, collection = "aqualoop_reports" } = req.body;
-    const aiResponse = await runGemini(prompt);
-    if (docId && updatefield) {
-      await db.collection("aqualoop_reports").doc(docId).update({
-        [updatefield]: {
-          content: aiResponse,
-          generated_at: new Date().toISOString(),
-          status: "completed"
-        }
       });
     }
+
 
     console.log("🔥 getWaterNearIndustry HIT", req.body);
 
@@ -111,12 +101,10 @@ const getWaterNearIndustry = async (req, res) => {
       message: "Water data fetched successfully using Earth Engine"
     });
 
-  } catch (err) {
+  }
+  catch (err) {
     console.error("❌ getWaterNearIndustry ERROR:", err);
-    return res.status(500).json({
-      success: false,
-      error: err.message
-    });
+    return res.status(500).json({ success: false, error: err.message });
   }
 };
 
@@ -197,7 +185,18 @@ const askGemini = async (req, res) => {
 //     console.error("Price Prediction Error:", err);
 /* ---------------- WATER PRICE PREDICTION HANDLER (NEW) ---------------- */
 
+/* ---------------- WATER PRICE PREDICTION HANDLER (NEW) ---------------- */
+
 const predictWaterPrice = async (req, res) => {
+  // ===== CORS =====
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).send("");
+  }
+
   try {
     const { grade, volume, pH, tds, bod, cod, location } = req.body;
 
@@ -246,6 +245,15 @@ Provide ONLY a single number representing the price per KLD in Indian Rupees (�
 /* ---------------- CREATE LISTING HANDLER (NEW) ---------------- */
 
 const createListing = async (req, res) => {
+  // ===== CORS =====
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).send("");
+  }
+
   try {
     const listingData = req.body;
 
@@ -272,6 +280,15 @@ const createListing = async (req, res) => {
 /* ---------------- GET LISTINGS HANDLER (NEW) ---------------- */
 
 const getListings = async (req, res) => {
+  // ===== CORS =====
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).send("");
+  }
+
   try {
     const snapshot = await db.collection("water_listings")
       .where("status", "==", "available")
@@ -296,75 +313,11 @@ const getListings = async (req, res) => {
   }
 };
 
-/* =========================
-   CREATE LISTING
-
-const createListing = async (req, res) => {
-  try {
-    const listingData = req.body;
-
-    const docRef = await db.collection("water_listings").add({
-      ...listingData,
-      status: "available",
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
-    });
-
-    res.status(201).json({
-      success: true,
-      listingId: docRef.id
-    });
-
-  } catch (err) {
-    console.error("Create Listing Error:", err);
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
-  }
-};
-
-/* =========================
-   GET LISTINGS
-
-const getListings = async (req, res) => {
-  try {
-    const snapshot = await db.collection("water_listings")
-      .where("status", "==", "available")
-      .orderBy("createdAt", "desc")
-      .get();
-
-    const listings = [];
-    snapshot.forEach(doc => {
-      listings.push({ id: doc.id, ...doc.data() });
-    });
-
-    res.status(200).json({
-      success: true,
-      listings
-    });
-
-  } catch (err) {
-    console.error("Get Listings Error:", err);
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
-  }
-};
-
-/* =========================
-   EXPORTS (Firebase v2 style)
-
-exports.askGemini = onRequest(askGemini);
-exports.predictWaterPrice = onRequest(predictWaterPrice);
-exports.createListing = onRequest(createListing);
-exports.getListings = onRequest(getListings);
-exports.getWaterNearIndustry = onRequest(getWaterNearIndustry);
 /* ---------------- EXPORT ALL ---------------- */
 
 module.exports = {
   askGemini,
-  getWaterPrediction,
+  getWaterNearIndustry,
   predictWaterPrice,
   createListing,
   getListings,

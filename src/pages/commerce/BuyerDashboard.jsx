@@ -34,6 +34,9 @@ export default function BuyerDashboard() {
     maxPrice: "",
   });
 
+  // Map Reference State
+  const [mapRef, setMapRef] = useState(null);
+
   useEffect(() => {
     fetchListings();
   }, []);
@@ -88,7 +91,7 @@ export default function BuyerDashboard() {
     try {
       const user = auth.currentUser;
       if (!user) {
-        navigate("/login");
+        navigate("/marketplace/login");
         return;
       }
 
@@ -128,6 +131,18 @@ export default function BuyerDashboard() {
     }
   };
 
+  const onMapLoad = (map) => {
+    setMapRef(map);
+  };
+
+  const handleListingClick = (listing) => {
+    setSelectedListing(listing);
+    if (mapRef && listing.location?.lat && listing.location?.lng) {
+      mapRef.panTo({ lat: listing.location.lat, lng: listing.location.lng });
+      mapRef.setZoom(12);
+    }
+  };
+
   const mapCenter = {
     lat: 20.5937, // India center
     lng: 78.9629,
@@ -135,8 +150,7 @@ export default function BuyerDashboard() {
 
   const mapContainerStyle = {
     width: "100%",
-    height: "500px",
-    borderRadius: "1.5rem",
+    height: "100%",
   };
 
   if (loading) {
@@ -148,30 +162,31 @@ export default function BuyerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-black p-10">
-      <div className="max-w-7xl mx-auto">
+    <div className="bg-black flex h-[calc(100vh-80px)] overflow-hidden">
+      {/* LEFT SIDE: Scrollable Listings */}
+      <div className="w-full lg:w-1/2 h-full overflow-y-auto p-6 space-y-6 custom-scrollbar">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <h1 className="text-5xl font-black text-white mb-8 flex items-center gap-4">
-            <Droplets className="text-aqua-cyan" size={48} />
+          <h1 className="text-4xl font-black text-white mb-6 flex items-center gap-4">
+            <Droplets className="text-aqua-cyan" size={40} />
             Water Marketplace
           </h1>
 
           {/* Filters */}
-          <div className="bg-aqua-surface/30 border border-aqua-border rounded-2xl p-6 mb-8">
+          <div className="bg-aqua-surface/30 border border-aqua-border rounded-2xl p-6 mb-8 sticky top-0 z-20 backdrop-blur-xl">
             <div className="flex items-center gap-3 mb-4">
               <Filter className="text-aqua-cyan" size={20} />
               <h3 className="text-white font-bold">Filters</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="text-slate-400 text-sm mb-2 block">Quality Grade</label>
+                <label className="text-slate-400 text-xs mb-2 block uppercase tracking-wider">Quality Grade</label>
                 <select
                   value={filters.grade}
                   onChange={(e) => setFilters({ ...filters, grade: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-900/50 border border-aqua-cyan/30 rounded-xl text-white focus:outline-none focus:border-aqua-cyan"
+                  className="w-full px-4 py-2 bg-slate-900/50 border border-aqua-cyan/30 rounded-xl text-white text-sm focus:outline-none focus:border-aqua-cyan"
                 >
                   <option value="all">All Grades</option>
                   <option value="A">Grade A</option>
@@ -181,192 +196,87 @@ export default function BuyerDashboard() {
                 </select>
               </div>
               <div>
-                <label className="text-slate-400 text-sm mb-2 block">Min Price (₹/KLD)</label>
+                <label className="text-slate-400 text-xs mb-2 block uppercase tracking-wider">Min Price</label>
                 <input
                   type="number"
                   value={filters.minPrice}
                   onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-900/50 border border-aqua-cyan/30 rounded-xl text-white focus:outline-none focus:border-aqua-cyan"
-                  placeholder="Min"
+                  className="w-full px-4 py-2 bg-slate-900/50 border border-aqua-cyan/30 rounded-xl text-white text-sm focus:outline-none focus:border-aqua-cyan"
+                  placeholder="₹/KLD"
                 />
               </div>
               <div>
-                <label className="text-slate-400 text-sm mb-2 block">Max Price (₹/KLD)</label>
+                <label className="text-slate-400 text-xs mb-2 block uppercase tracking-wider">Max Price</label>
                 <input
                   type="number"
                   value={filters.maxPrice}
                   onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-900/50 border border-aqua-cyan/30 rounded-xl text-white focus:outline-none focus:border-aqua-cyan"
-                  placeholder="Max"
+                  className="w-full px-4 py-2 bg-slate-900/50 border border-aqua-cyan/30 rounded-xl text-white text-sm focus:outline-none focus:border-aqua-cyan"
+                  placeholder="₹/KLD"
                 />
               </div>
             </div>
           </div>
 
-          {/* Google Maps */}
-          <div className="bg-aqua-surface/30 border border-aqua-border rounded-2xl p-6 mb-8 overflow-hidden">
-            <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-              <MapPin className="text-aqua-cyan" />
-              Available Water Locations
-            </h3>
-            <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}>
-              <GoogleMap
-                mapContainerStyle={mapContainerStyle}
-                center={mapCenter}
-                zoom={5}
-                options={{
-                  styles: [
-                    { elementType: "geometry", stylers: [{ color: "#1e1e1e" }] },
-                    { elementType: "labels.text.stroke", stylers: [{ color: "#1e1e1e" }] },
-                    { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-                  ],
-                }}
-              >
-                {filteredListings.map((listing) => {
-                  if (!listing.location?.lat || !listing.location?.lng) return null;
-                  
-                  return (
-                    <Marker
-                      key={listing.id}
-                      position={{ lat: listing.location.lat, lng: listing.location.lng }}
-                      onClick={() => setSelectedListing(listing)}
-                      icon={{
-                        path: window.google.maps.SymbolPath.CIRCLE,
-                        fillColor: GRADE_COLORS[listing.waterQuality.grade] || "#00f2ff",
-                        fillOpacity: 0.8,
-                        strokeColor: "#ffffff",
-                        strokeWeight: 2,
-                        scale: 10,
-                      }}
-                    />
-                  );
-                })}
-
-                {selectedListing && (
-                  <InfoWindow
-                    position={{ 
-                      lat: selectedListing.location.lat, 
-                      lng: selectedListing.location.lng 
-                    }}
-                    onCloseClick={() => setSelectedListing(null)}
-                  >
-                    <div className="p-2 bg-slate-900 text-white rounded-lg max-w-xs">
-                      <h4 className="font-bold mb-1">{selectedListing.industryInfo.name}</h4>
-                      <p className="text-xs text-slate-400 mb-2">{selectedListing.industryInfo.type}</p>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-bold" style={{ color: GRADE_COLORS[selectedListing.waterQuality.grade] }}>
-                          Grade {selectedListing.waterQuality.grade}
-                        </span>
-                        <span className="text-slate-400">•</span>
-                        <span className="text-sm">{selectedListing.volume} KLD</span>
-                      </div>
-                      <p className="text-emerald-400 font-bold">
-                        ₹{selectedListing.pricePerKLD}/KLD
-                      </p>
-                    </div>
-                  </InfoWindow>
-                )}
-              </GoogleMap>
-            </LoadScript>
-          </div>
-
-          {/* Listings Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Listings List */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredListings.map((listing) => (
               <motion.div
                 key={listing.id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ scale: 1.02 }}
-                className="bg-aqua-surface/30 border border-aqua-border rounded-2xl p-6 hover:border-aqua-cyan/50 transition-all cursor-pointer"
-                onClick={() => setSelectedListing(listing)}
+                whileHover={{ scale: 1.02, borderColor: '#22d3ee' }}
+                className={`bg-aqua-surface/30 border rounded-2xl p-5 cursor-pointer transition-all ${selectedListing?.id === listing.id ? 'border-aqua-cyan ring-1 ring-aqua-cyan' : 'border-aqua-border'}`}
+                onClick={() => handleListingClick(listing)}
               >
                 {/* Industry Header */}
-                <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center gap-3 mb-3">
                   {listing.industryInfo.logoUrl ? (
                     <img
                       src={listing.industryInfo.logoUrl}
                       alt={listing.industryInfo.name}
-                      className="w-12 h-12 rounded-full object-cover border-2 border-aqua-cyan"
+                      className="w-10 h-10 rounded-full object-cover border border-aqua-cyan"
                     />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-aqua-cyan/20 flex items-center justify-center">
-                      <Factory className="text-aqua-cyan" size={24} />
+                    <div className="w-10 h-10 rounded-full bg-aqua-cyan/20 flex items-center justify-center">
+                      <Factory className="text-aqua-cyan" size={20} />
                     </div>
                   )}
-                  <div className="flex-1">
-                    <h3 className="text-white font-bold">{listing.industryInfo.name}</h3>
-                    <p className="text-slate-400 text-xs">{listing.industryInfo.type}</p>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-bold truncate">{listing.industryInfo.name}</h3>
+                    <p className="text-slate-400 text-[10px] uppercase tracking-wider">{listing.industryInfo.type}</p>
                   </div>
                 </div>
 
-                {/* Water Quality */}
-                <div className="bg-gradient-to-r from-aqua-cyan/10 to-emerald-400/10 rounded-xl p-4 mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-slate-400 text-sm">Quality Grade</span>
-                    <span 
-                      className="font-black text-2xl"
-                      style={{ color: GRADE_COLORS[listing.waterQuality.grade] }}
-                    >
-                      {listing.waterQuality.grade}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-slate-500">pH:</span>
-                      <span className="text-white ml-1">{listing.waterQuality.pH}</span>
+                {/* Key Stats Row */}
+                <div className="flex items-center gap-2 mb-3">
+                    <div className="flex-1 bg-slate-900/50 px-3 py-2 rounded-lg border border-white/5">
+                        <span className="text-[10px] text-slate-500 block">GRADE</span>
+                        <span className="font-black text-lg" style={{ color: GRADE_COLORS[listing.waterQuality.grade] }}>{listing.waterQuality.grade}</span>
                     </div>
-                    <div>
-                      <span className="text-slate-500">TDS:</span>
-                      <span className="text-white ml-1">{listing.waterQuality.tds}</span>
+                    <div className="flex-1 bg-slate-900/50 px-3 py-2 rounded-lg border border-white/5">
+                        <span className="text-[10px] text-slate-500 block">VOLUME</span>
+                        <span className="font-bold text-white text-sm">{listing.volume} KLD</span>
                     </div>
-                  </div>
                 </div>
 
-                {/* Volume & Price */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400 text-sm">Volume</span>
-                    <span className="text-white font-bold">{listing.volume} KLD</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400 text-sm">Price/KLD</span>
-                    <span className="text-emerald-400 font-black text-lg">
-                      ₹{listing.pricePerKLD.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="pt-3 border-t border-aqua-cyan/20">
-                    <div className="flex items-center justify-between">
-                      <span className="text-aqua-cyan text-sm font-semibold">Total Price</span>
-                      <span className="text-aqua-cyan font-black text-xl">
-                        ₹{listing.totalPrice.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
+                {/* Price & Action */}
+                <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                   <div>
+                      <p className="text-[10px] text-slate-500 uppercase">Total Price</p>
+                      <p className="text-aqua-cyan font-black text-lg">₹{listing.totalPrice.toLocaleString()}</p>
+                   </div>
+                   <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedForPurchase(listing);
+                      setShowPurchaseModal(true);
+                    }}
+                    className="bg-white text-black p-2 rounded-lg hover:bg-aqua-cyan transition-colors"
+                   >
+                     <ShoppingCart size={18} />
+                   </button>
                 </div>
-
-                {/* Purchase Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedForPurchase(listing);
-                    setShowPurchaseModal(true);
-                  }}
-                  className="w-full mt-4 py-3 bg-gradient-to-r from-aqua-cyan to-emerald-400 hover:from-aqua-cyan/80 hover:to-emerald-400/80 text-black font-black rounded-xl transition-all flex items-center justify-center gap-2"
-                >
-                  <ShoppingCart size={18} />
-                  Purchase Water
-                </button>
-
-                {/* Location */}
-                {listing.location && (
-                  <div className="mt-4 pt-4 border-t border-slate-700">
-                    <div className="flex items-center gap-2 text-slate-400 text-xs">
-                      <MapPin size={14} className="text-aqua-cyan" />
-                      <span className="truncate">{listing.location.address}</span>
-                    </div>
-                  </div>
-                )}
               </motion.div>
             ))}
           </div>
@@ -375,28 +285,98 @@ export default function BuyerDashboard() {
             <div className="text-center py-20">
               <Droplets className="mx-auto text-slate-600 mb-4" size={64} />
               <p className="text-slate-400 text-lg">No water listings found</p>
-              <p className="text-slate-500 text-sm">Try adjusting your filters</p>
             </div>
           )}
         </motion.div>
+      </div>
 
-        {/* Purchase Modal */}
-        <AnimatePresence>
-          {showPurchaseModal && selectedForPurchase && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-              onClick={() => !orderSubmitting && setShowPurchaseModal(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, y: 20 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.9, y: 20 }}
-                onClick={(e) => e.stopPropagation()}
-                className="bg-slate-900 border border-aqua-cyan/30 rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+      {/* RIGHT SIDE: Full Height Map */}
+      <div className="hidden lg:block w-1/2 h-full relative border-l border-white/10">
+        <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}>
+          <GoogleMap
+            mapContainerStyle={mapContainerStyle}
+            center={mapCenter}
+            zoom={5}
+            onLoad={onMapLoad}
+            options={{
+              disableDefaultUI: false,
+              styles: [
+                { elementType: "geometry", stylers: [{ color: "#0f172a" }] },
+                { elementType: "labels.text.stroke", stylers: [{ color: "#0f172a" }] },
+                { elementType: "labels.text.fill", stylers: [{ color: "#94a3b8" }] },
+                { featureType: "water", elementType: "geometry", stylers: [{ color: "#083344" }] },
+                { featureType: "road", elementType: "geometry", stylers: [{ color: "#1e293b" }] },
+              ],
+            }}
+          >
+            {filteredListings.map((listing) => {
+              if (!listing.location?.lat || !listing.location?.lng) return null;
+              
+              return (
+                <Marker
+                  key={listing.id}
+                  position={{ lat: listing.location.lat, lng: listing.location.lng }}
+                  onClick={() => handleListingClick(listing)}
+                  icon={{
+                    path: window.google.maps.SymbolPath.CIRCLE,
+                    fillColor: GRADE_COLORS[listing.waterQuality.grade] || "#00f2ff",
+                    fillOpacity: 1,
+                    strokeColor: "#ffffff",
+                    strokeWeight: 2,
+                    scale: 8,
+                  }}
+                />
+              );
+            })}
+
+            {selectedListing && (
+              <InfoWindow
+                position={{ 
+                  lat: selectedListing.location.lat, 
+                  lng: selectedListing.location.lng 
+                }}
+                onCloseClick={() => setSelectedListing(null)}
               >
+                <div className="p-3 bg-slate-900 text-white rounded-lg shadow-xl border border-white/10">
+                  <h4 className="font-bold text-sm mb-1">{selectedListing.industryInfo.name}</h4>
+                  <div className="flex gap-2 text-xs text-slate-300 mb-2">
+                     <span>{selectedListing.volume} KLD</span>
+                     <span>•</span>
+                     <span style={{ color: GRADE_COLORS[selectedListing.waterQuality.grade] }}>Grade {selectedListing.waterQuality.grade}</span>
+                  </div>
+                  <button 
+                    className="w-full bg-cyan-500 text-black text-xs font-bold py-1.5 rounded hover:bg-cyan-400"
+                    onClick={() => {
+                        setSelectedForPurchase(selectedListing);
+                        setShowPurchaseModal(true);
+                    }}
+                  >
+                    Details & Buy
+                  </button>
+                </div>
+              </InfoWindow>
+            )}
+          </GoogleMap>
+        </LoadScript>
+      </div>
+
+      {/* Purchase Modal */}
+      <AnimatePresence>
+        {showPurchaseModal && selectedForPurchase && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => !orderSubmitting && setShowPurchaseModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-slate-900 border border-aqua-cyan/30 rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            >
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-3xl font-black text-white flex items-center gap-3">
@@ -411,25 +391,62 @@ export default function BuyerDashboard() {
                   </button>
                 </div>
 
-                {/* Order Summary */}
                 <div className="bg-gradient-to-r from-aqua-cyan/10 to-emerald-400/10 rounded-2xl p-6 mb-6">
-                  <h3 className="text-white font-bold mb-4">Order Summary</h3>
+                  <h3 className="text-white font-bold mb-4">Water & Seller Details</h3>
+                  
+                  {/* Seller Info */}
+                  <div className="mb-4 pb-4 border-b border-aqua-cyan/20">
+                     <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-2">Seller Information</p>
+                     <div className="flex items-center justify-between mb-1">
+                        <span className="text-white font-semibold">{selectedForPurchase.industryInfo.name}</span>
+                        <span className="text-xs text-aqua-cyan border border-aqua-cyan px-2 py-0.5 rounded-full">{selectedForPurchase.industryInfo.type}</span>
+                     </div>
+                     {selectedForPurchase.location && (
+                        <div className="flex items-center gap-2 text-slate-400 text-xs">
+                           <MapPin size={12} />
+                           <span>{selectedForPurchase.location.address}</span>
+                        </div>
+                     )}
+                  </div>
+
+                  {/* Water Quality Grid */}
+                  <div className="mb-4 pb-4 border-b border-aqua-cyan/20">
+                     <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-3">Quality Report</p>
+                     <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
+                        <div className="flex justify-between">
+                           <span className="text-slate-400">Grade</span>
+                           <span className="font-bold" style={{ color: GRADE_COLORS[selectedForPurchase.waterQuality.grade] }}>{selectedForPurchase.waterQuality.grade}</span>
+                        </div>
+                        <div className="flex justify-between">
+                           <span className="text-slate-400">pH</span>
+                           <span className="text-white">{selectedForPurchase.waterQuality.pH || "N/A"}</span>
+                        </div>
+                        <div className="flex justify-between">
+                           <span className="text-slate-400">TDS (ppm)</span>
+                           <span className="text-white">{selectedForPurchase.waterQuality.solids || "N/A"}</span>
+                        </div>
+                        <div className="flex justify-between">
+                           <span className="text-slate-400">Turbidity</span>
+                           <span className="text-white">{selectedForPurchase.waterQuality.turbidity || "N/A"}</span>
+                        </div>
+                        <div className="flex justify-between">
+                           <span className="text-slate-400">Hardness</span>
+                           <span className="text-white">{selectedForPurchase.waterQuality.hardness || "N/A"}</span>
+                        </div>
+                        <div className="flex justify-between">
+                           <span className="text-slate-400">Conductivity</span>
+                           <span className="text-white">{selectedForPurchase.waterQuality.conductivity || "N/A"}</span>
+                        </div>
+                     </div>
+                  </div>
+
+                  {/* Pricing */}
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-slate-400">Seller:</span>
-                      <span className="text-white font-semibold">{selectedForPurchase.industryInfo.name}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Quality Grade:</span>
-                      <span className="font-bold" style={{ color: GRADE_COLORS[selectedForPurchase.waterQuality.grade] }}>
-                        {selectedForPurchase.waterQuality.grade}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Volume:</span>
+                      <span className="text-slate-400">Volume Required:</span>
                       <span className="text-white font-semibold">{selectedForPurchase.volume} KLD</span>
                     </div>
-                    <div className="flex justify-between pt-3 border-t border-aqua-cyan/20">
+                    <div className="flex justify-between pt-2">
                       <span className="text-aqua-cyan font-bold">Total Price:</span>
                       <span className="text-aqua-cyan font-black text-xl">
                         ₹{selectedForPurchase.totalPrice.toLocaleString()}
@@ -489,10 +506,9 @@ export default function BuyerDashboard() {
                   </button>
                 </div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

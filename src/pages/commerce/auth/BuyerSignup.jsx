@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { auth, googleProvider, db } from "../../../services/firebase";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
-import { Droplets, Mail, ArrowRight, Loader2, Lock, Building2 } from "lucide-react";
+import { Droplets, Mail, ArrowRight, Loader2, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function BuyerSignup() {
@@ -12,8 +12,7 @@ export default function BuyerSignup() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    confirmPassword: "",
-    companyName: "" // Optional initial collection
+    confirmPassword: ""
   });
   const [error, setError] = useState("");
 
@@ -41,15 +40,10 @@ export default function BuyerSignup() {
       // 1. Create Auth User
       const res = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
 
-      // 2. Create Firestore Doc (Force Role: "buyer")
-      await setDoc(doc(db, "users", res.user.uid), {
+      // 2. Create Firestore Doc in "buyers" collection
+      await setDoc(doc(db, "buyers", res.user.uid), {
         email: formData.email,
-        role: "buyer",
-        companyName: formData.companyName,
-        createdAt: serverTimestamp(),
-        provider: "password",
-        emailVerified: false,
-        profileCompleted: true // Buyers skip industry profile
+        createdAt: serverTimestamp()
       });
 
       navigate("/marketplace", { replace: true });
@@ -71,25 +65,17 @@ export default function BuyerSignup() {
       setLoading(true);
       const res = await signInWithPopup(auth, googleProvider);
       
-      const userRef = doc(db, "users", res.user.uid);
-      const userSnap = await getDoc(userRef);
+      const buyerRef = doc(db, "buyers", res.user.uid);
+      const buyerSnap = await getDoc(buyerRef);
 
-      if (!userSnap.exists()) {
-        // First time Google -> Create as BUYER
-        await setDoc(userRef, {
+      if (!buyerSnap.exists()) {
+        // First time Google -> Create in "buyers"
+        await setDoc(buyerRef, {
           email: res.user.email,
-          role: "buyer",
-          provider: "google",
-          emailVerified: true,
-          createdAt: serverTimestamp(),
-          profileCompleted: true
+          createdAt: serverTimestamp()
         });
       }
       
-      // If they exist, we just redirect. 
-      // Ideally we check role, but sticking to "Signup" flow, we assume they want to be buyers.
-      // If came from google as industry, they still get redirected correctly by dashboard logic if implemented,
-      // but here we force marketplace redirection.
       navigate("/marketplace", { replace: true });
 
     } catch (err) {
@@ -124,20 +110,7 @@ export default function BuyerSignup() {
 
         <form onSubmit={handleSignup} className="space-y-4">
           
-          <div>
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Company Name (Optional)</label>
-            <div className="relative">
-              <input 
-                type="text" 
-                name="companyName"
-                value={formData.companyName}
-                onChange={handleChange}
-                className="w-full bg-[#0a101f] border border-white/10 rounded-xl px-4 py-3 pl-10 text-white focus:outline-none focus:border-emerald-500 transition-colors"
-                placeholder="Acme Construction Ltd."
-              />
-              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-            </div>
-          </div>
+
 
           <div>
             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Email Address</label>

@@ -24,7 +24,7 @@ import {
 import { auth, db } from "../services/firebase";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 
-/* ---------------- CONSTANTS ---------------- */
+
 
 const INDUSTRY_PROFILES = {
   textile: {
@@ -100,7 +100,7 @@ const saveSimulationForUser = async ({
 };
 
 
-/* ---------------- COMPONENT ---------------- */
+
 
 const TreatmentSimulation = () => {
   const [industry, setIndustry] = useState("textile");
@@ -191,9 +191,8 @@ const TreatmentSimulation = () => {
           influent: form, stages: history, createdAt: Timestamp.now()
         });
       }
-    } catch {
-      setError("ENGINE_LINK_OFFLINE");
-    } finally {
+    } 
+     finally {
       setLoading(false);
     }
   };

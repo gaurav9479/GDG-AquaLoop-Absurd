@@ -140,7 +140,7 @@ const DashBoard = () => {
     setIsProcessing(true);
     try {
       await axios.post(
-        "https://askgemini-aac2l65yqa-uc.a.run.app",
+        "/api/askGemini",
         {
           docId: report.id,
           updatefield: "processed_data",
