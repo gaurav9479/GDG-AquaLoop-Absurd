@@ -61,7 +61,6 @@ const PARAM_METADATA = [
 ];
 
 /* ---------------- FIREBASE SAVE ---------------- */
-console.log("Auth user at save time:", auth.currentUser);
 
 const saveSimulationForUser = async ({
   industry,
@@ -77,18 +76,13 @@ const saveSimulationForUser = async ({
       return;
     }
 
-    console.log("saveSimulationForUser called for UID:", user.uid);
-
-    await addDoc(
-      collection(db, "users", user.uid, "simulations"),
-      {
-        industry,
-        manualIndustryName: manualIndustryName || null,
-        influent,
-        stages: results,
-        createdAt: Timestamp.now(),
-      }
-    );
+    await addDoc(collection(db, "users", user.uid, "simulations"), {
+      industry,
+      manualIndustryName: manualIndustryName || null,
+      influent,
+      stages: results,
+      createdAt: Timestamp.now()
+    });
 
     console.log("Simulation successfully saved to Firestore.");
 
@@ -97,8 +91,7 @@ const saveSimulationForUser = async ({
   }
 };
 
-
-
+/* ---------------- COMPONENT ---------------- */
 
 const TreatmentSimulation = () => {
   const [industry, setIndustry] = useState("textile");
@@ -114,9 +107,26 @@ const TreatmentSimulation = () => {
     setError("");
   }, [industry]);
 
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      console.log("🔥 AUTH STATE CHANGED");
+      console.log("LOGGED IN UID:", user?.uid);
+      console.log("LOGGED IN EMAIL:", user?.email);
+    });
+
+    return () => unsub();
+  }, []);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
+
+  const runSimulation = async () => {
+    console.log("🚀 RUN SIMULATION CLICKED");
+    console.log("LOGGED IN UID:", auth.currentUser?.uid);
+
+    const finalIndustryLabel =
+      industry === "manual" ? manualIndustryName : industry;
 
   const saveSimulationForUser = async ({ industry, manualIndustryName, influent, results }) => {
     try {
@@ -169,15 +179,26 @@ const TreatmentSimulation = () => {
         currentParams = output;
       }
       setResults(history);
-      await saveSimulationForUser({ industry, manualIndustryName, influent: form, results: history });
-    } catch {
+
+      await saveSimulationForUser({
+        industry,
+        manualIndustryName,
+        influent: currentParams,
+        results: history
+      });
+
+    } catch (err) {
+      console.error("❌ Simulation Error:", err);
       setError("Simulation Engine Offline.");
-      
+
       const user = auth.currentUser;
       if (user) {
         await addDoc(collection(db, "users", user.uid, "simulations"), {
-          industry, manualIndustryName: manualIndustryName || null,
-          influent: form, stages: history, createdAt: Timestamp.now()
+          industry,
+          manualIndustryName: manualIndustryName || null,
+          influent: form,
+          stages: history,
+          createdAt: Timestamp.now()
         });
       }
     } 
@@ -185,6 +206,8 @@ const TreatmentSimulation = () => {
       setLoading(false);
     }
   };
+
+  /* ---------------- JSX ---------------- */
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-6 h-screen flex flex-col overflow-hidden animate-in fade-in duration-1000">
@@ -201,6 +224,51 @@ const TreatmentSimulation = () => {
         </h1>
       </header>
 
+      {/* MAIN GRID */}
+      <div className="grid lg:grid-cols-12 gap-10">
+
+        {/* FORM */}
+        <aside className="lg:col-span-4 space-y-4">
+          <select
+            value={industry}
+            onChange={(e) => setIndustry(e.target.value)}
+            className="w-full bg-aqua-dark text-white p-3 rounded-xl"
+          >
+            {Object.entries(INDUSTRY_PROFILES).map(([k, v]) => (
+              <option key={k} value={k}>{v.label}</option>
+            ))}
+          </select>
+
+          {industry === "manual" && (
+            <input
+              value={manualIndustryName}
+              onChange={(e) => setManualIndustryName(e.target.value)}
+              placeholder="Industry name"
+              className="w-full bg-aqua-dark text-white p-3 rounded-xl"
+            />
+          )}
+
+          {PARAM_METADATA.map((p) => (
+            <input
+              key={p.id}
+              name={p.id}
+              type="number"
+              value={form[p.id]}
+              onChange={handleChange}
+              placeholder={`${p.label} (${p.unit})`}
+              className="w-full bg-aqua-dark text-white p-3 rounded-xl"
+            />
+          ))}
+
+          <button
+            onClick={runSimulation}
+            disabled={loading}
+            className="w-full bg-aqua-cyan text-black font-black p-4 rounded-xl"
+          >
+            {loading ? "Analyzing..." : "Execute Simulation"}
+          </button>
+
+          {error && <p className="text-red-400 text-sm">{error}</p>}
       <div className="grid lg:grid-cols-12 gap-8 flex-1 overflow-hidden">
         
         {/* LEFT COLUMN: CONTROLS */}

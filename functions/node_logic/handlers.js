@@ -1,6 +1,7 @@
 
 const axios = require("axios");
 const admin = require("firebase-admin");
+
 const { onRequest } = require("firebase-functions/v2/https");
 const ee = require("@google/earthengine");
 
@@ -50,12 +51,14 @@ function getWaterDataNearLocation(lat, lng) {
   });
 }
 
-exports.getWaterNearIndustry = onRequest(async (req, res) => {
-  res.set("Access-Control-Allow-Origin", "*");
+
+   WATER NEAR INDUSTRY HANDLER
   res.set("Access-Control-Allow-Headers", "Content-Type");
   res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
 
-  if (req.method === "OPTIONS") return res.status(204).send("");
+  if (req.method === "OPTIONS") {
+    return res.status(204).send("");
+  }
 
   try {
     if (!eeReady) {
@@ -87,11 +90,16 @@ exports.getWaterNearIndustry = onRequest(async (req, res) => {
     console.error("❌ getWaterNearIndustry ERROR:", err);
     return res.status(500).json({ success: false, error: err.message });
   }
+};
+
+
+   GEMINI HANDLER
+
+const askGemini = async (req, res) => {
 });
 
-/* =========================
+
    GEMINI AUDIT
-========================= */
 exports.askGemini = onRequest(async (req, res) => {
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Headers", "Content-Type");
@@ -167,7 +175,8 @@ const predictWaterPrice = async (req, res) => {
     const prompt = `Predict water price per KLD for grade ${grade}, volume ${volume}KLD. Only number.`;
     const reply = await runGemini(prompt);
 
-    const price = Number(reply.match(/\d+/)?.[0] || 25);
+    const priceMatch = predictedPrice.match(/\d+(\.\d+)?/);
+    const price = priceMatch ? parseFloat(priceMatch[0]) : 25;
 
     res.json({
       success: true,
@@ -219,6 +228,23 @@ const createListing = async (req, res) => {
   }
 };
 
+
+   CREATE LISTING
+
+const createListing = async (req, res) => {
+  try {
+    const listingData = req.body;
+
+    const docRef = await db.collection("water_listings").add({
+      ...listingData,
+      status: "available",
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    res.status(201).json({
+      success: true,
+      listingId: docRef.id
+    });
 /* ---------------- GET LISTINGS HANDLER (NEW) ---------------- */
 
 const getListings = async (req, res) => {
@@ -230,6 +256,10 @@ const getListings = async (req, res) => {
   if (req.method === "OPTIONS") {
     return res.status(204).send("");
   }
+};
+
+
+   GET LISTINGS
 
   try {
     const snapshot = await db.collection("water_listings")
@@ -255,6 +285,11 @@ const getListings = async (req, res) => {
   }
 };
 
+
+   EXPORT PURE FUNCTIONS
+
+module.exports = {
+  askGemini,
 /* ---------------- EXPORT ALL ---------------- */
 
 module.exports = {
@@ -263,6 +298,7 @@ module.exports = {
   predictWaterPrice,
   createListing,
   getListings,
+  getWaterNearIndustry
 };
     
 

@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { auth, db } from "../services/firebase";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, doc, getDoc } from "firebase/firestore";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   BarChart, Bar
@@ -20,16 +20,11 @@ const GlassCard = ({ title, subtitle, icon, accent, children }) => (
     shadow-[0_20px_60px_rgba(0,0,0,0.8)]
     border border-white/5"
   >
-    {/* subtle neon edge */}
     <div
       className="absolute -inset-[1px] rounded-3xl blur-xl opacity-30 pointer-events-none"
       style={{ background: accent }}
     />
-
-    {/* inner shine */}
     <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-30 pointer-events-none" />
-
-    {/* top gloss */}
     <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-white/20 to-transparent opacity-20 pointer-events-none" />
 
     <div className="relative z-10">
@@ -94,18 +89,55 @@ const WQIGlassTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-
 /* ---------------- MAIN PAGE ---------------- */
 
 const Trends = () => {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [aiReport, setAiReport] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const fetchAIAdvisorReport = async (profileData, latestSimulation) => {
+    try {
+      setAiLoading(true);
+
+      const res = await fetch(
+        "https://us-central1-aqualoop-ai-gdg-1.cloudfunctions.net/aiProcessAdvisor",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            industryProfile: profileData,
+            simulation: latestSimulation
+          })
+        }
+      );
+
+      const data = await res.json();
+
+      if (data.success) {
+        setAiReport(data.text);
+      } else {
+        setAiReport("AI analysis failed. Please try again.");
+      }
+
+      setAiLoading(false);
+    } catch (err) {
+      console.error("AI Advisor Error:", err);
+      setAiReport("AI service unavailable at the moment.");
+      setAiLoading(false);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       const user = auth.currentUser;
       if (!user) return;
 
+      // Fetch simulations
       const q = query(
         collection(db, "users", user.uid, "simulations"),
         orderBy("createdAt", "asc")
@@ -114,6 +146,18 @@ const Trends = () => {
       const snap = await getDocs(q);
       const all = snap.docs.map(doc => doc.data());
       setRecords(all);
+
+      // Fetch industry profile (infrastructure + water balance)
+      const profileRef = doc(db, "users", user.uid);
+      const profileSnap = await getDoc(profileRef);
+      const profileData = profileSnap.data();
+
+      // Call AI Advisor with latest simulation
+      if (profileData && all.length > 0) {
+        const latestSimulation = all[all.length - 1];
+        fetchAIAdvisorReport(profileData, latestSimulation);
+      }
+
       setLoading(false);
     };
 
@@ -156,10 +200,6 @@ const Trends = () => {
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-[#020617] via-[#020b1f] to-[#000814] p-8 space-y-10">
 
-      {/* ambient glow */}
-      <div className="pointer-events-none absolute inset-0 
-        bg-[radial-gradient(circle_at_20%_20%,rgba(34,211,238,0.08),transparent_40%),radial-gradient(circle_at_80%_30%,rgba(59,130,246,0.08),transparent_40%),radial-gradient(circle_at_60%_80%,rgba(34,197,94,0.08),transparent_40%)]" />
-
       {/* HEADER */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -178,7 +218,6 @@ const Trends = () => {
       {/* TOP 3 CARDS */}
       <div className="relative z-10 grid md:grid-cols-3 gap-10">
 
-        {/* PRIMARY */}
         <GlassCard
           title="PRIMARY TREATMENT"
           subtitle="Turbidity Reduction Trend"
@@ -188,13 +227,7 @@ const Trends = () => {
           <div className="h-[220px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={primaryTrend}>
-                <Line
-                  type="monotone"
-                  dataKey="after"
-                  stroke="#22d3ee"
-                  strokeWidth={3}
-                  dot={{ r: 4, fill: "#22d3ee" }}
-                />
+                <Line type="monotone" dataKey="after" stroke="#22d3ee" strokeWidth={3} dot={{ r: 4, fill: "#22d3ee" }} />
                 <XAxis dataKey="name" tick={{ fill: "#cbd5e1", fontSize: 12 }} />
                 <YAxis tick={{ fill: "#cbd5e1", fontSize: 12 }} />
                 <Tooltip content={<GlassTooltip param="Turbidity" unit="NTU" />} />
@@ -203,7 +236,6 @@ const Trends = () => {
           </div>
         </GlassCard>
 
-        {/* SECONDARY */}
         <GlassCard
           title="SECONDARY TREATMENT"
           subtitle="BOD Removal Trend"
@@ -213,13 +245,7 @@ const Trends = () => {
           <div className="h-[220px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={secondaryTrend}>
-                <Line
-                  type="monotone"
-                  dataKey="after"
-                  stroke="#3b82f6"
-                  strokeWidth={3}
-                  dot={{ r: 4, fill: "#3b82f6" }}
-                />
+                <Line type="monotone" dataKey="after" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: "#3b82f6" }} />
                 <XAxis dataKey="name" tick={{ fill: "#cbd5e1", fontSize: 12 }} />
                 <YAxis tick={{ fill: "#cbd5e1", fontSize: 12 }} />
                 <Tooltip content={<GlassTooltip param="BOD" unit="mg/L" />} />
@@ -228,7 +254,6 @@ const Trends = () => {
           </div>
         </GlassCard>
 
-        {/* TERTIARY */}
         <GlassCard
           title="TERTIARY TREATMENT"
           subtitle="TSS Polishing Trend"
@@ -238,13 +263,7 @@ const Trends = () => {
           <div className="h-[220px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={tertiaryTrend}>
-                <Line
-                  type="monotone"
-                  dataKey="after"
-                  stroke="#22c55e"
-                  strokeWidth={3}
-                  dot={{ r: 4, fill: "#22c55e" }}
-                />
+                <Line type="monotone" dataKey="after" stroke="#22c55e" strokeWidth={3} dot={{ r: 4, fill: "#22c55e" }} />
                 <XAxis dataKey="name" tick={{ fill: "#cbd5e1", fontSize: 12 }} />
                 <YAxis tick={{ fill: "#cbd5e1", fontSize: 12 }} />
                 <Tooltip content={<GlassTooltip param="TSS" unit="mg/L" />} />
@@ -265,14 +284,15 @@ const Trends = () => {
         border border-cyan-400/20
         shadow-[0_0_40px_rgba(34,211,238,0.25)]"
       >
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-400/10 via-blue-500/5 to-transparent opacity-60 pointer-events-none" />
-        <h3 className="text-white font-bold mb-1">AI Process Advisor</h3>
-        <p className="text-slate-300 text-sm">
-          Detected consistent improvement across multiple runs. Treatment system performance is stabilizing.
+        <h3 className="text-white font-bold mb-2">AI Process Advisor</h3>
+        <p className="text-slate-300 text-sm whitespace-pre-line leading-relaxed">
+          {aiLoading
+            ? "Analyzing plant infrastructure, equipment configuration, treatment performance and water reuse strategy..."
+            : aiReport}
         </p>
       </motion.div>
 
-      {/* WQI BAR CHART – DARK ONLY */}
+      {/* WQI BAR CHART */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -287,14 +307,13 @@ const Trends = () => {
         </h3>
 
         <ResponsiveContainer width="100%" height={260}>
-  <BarChart data={wqiData}>
-    <Bar dataKey="value" fill="#22d3ee" radius={[8, 8, 0, 0]} />
-    <XAxis dataKey="name" tick={{ fill: "#cbd5e1", fontSize: 12 }} />
-    <YAxis tick={{ fill: "#cbd5e1", fontSize: 12 }} />
-    <Tooltip content={<WQIGlassTooltip />} />
-  </BarChart>
-</ResponsiveContainer>
-
+          <BarChart data={wqiData}>
+            <Bar dataKey="value" fill="#22d3ee" radius={[8, 8, 0, 0]} />
+            <XAxis dataKey="name" tick={{ fill: "#cbd5e1", fontSize: 12 }} />
+            <YAxis tick={{ fill: "#cbd5e1", fontSize: 12 }} />
+            <Tooltip content={<WQIGlassTooltip />} />
+          </BarChart>
+        </ResponsiveContainer>
       </motion.div>
 
     </div>
