@@ -1,4 +1,5 @@
 const admin = require("firebase-admin");
+
 const { onRequest } = require("firebase-functions/v2/https");
 const ee = require("@google/earthengine");
 const { runGemini } = require("./geminiHelper");
@@ -34,10 +35,6 @@ const setCors = (res) => {
 
 /* =========================
    WATER NEAR INDUSTRY
-========================= */
-exports.getWaterNearIndustry = onRequest(async (req, res) => {
-  setCors(res);
-  if (req.method === "OPTIONS") return res.status(204).send("");
 
   try {
     if (!eeReady) {
@@ -72,11 +69,16 @@ exports.getWaterNearIndustry = onRequest(async (req, res) => {
     console.error(err);
     res.status(500).json({ success: false, error: err.message });
   }
+};
+
+
+   GEMINI HANDLER
+
+const askGemini = async (req, res) => {
 });
 
-/* =========================
+
    GEMINI AUDIT
-========================= */
 exports.askGemini = onRequest(async (req, res) => {
   setCors(res);
   if (req.method === "OPTIONS") return res.status(204).send("");
@@ -155,10 +157,6 @@ exports.createListing = onRequest(async (req, res) => {
 
 /* =========================
    GET LISTINGS
-========================= */
-exports.getListings = onRequest(async (req, res) => {
-  setCors(res);
-  if (req.method === "OPTIONS") return res.status(204).send("");
 
   try {
     const snapshot = await db
