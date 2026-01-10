@@ -58,17 +58,11 @@ export default function App() {
               <Route path="/trends" element={<Trends />} />
               <Route path="/predict" element={<Predictor />} />
               <Route path="/predict-stage" element={<TreatmentSimulation/>}/>
-              <Route path="/water-risk-map" element={<WaterRiskMap />} />
-
               <Route path="/commerce/reports" element={<MyWaterReports />} />
               <Route path="/commerce/sell" element={<SellWater />} />
-              {/* Note: /commerce/buy removed from here if strictly separated, but maybe keep for industry access? 
-                  Let's keep /commerce/buy pointing to BuyerDashboard for industry convenience, 
-                  but mapped under MainLayout. 
-              */}
               <Route path="/commerce/buy" element={<BuyerDashboard />} />
               <Route path="/commerce/orders/seller" element={<SellerOrders />} />
-              {/* <Route path="/commerce/orders/buyer" element={<UserOrders />} />  Moved to marketplace */}
+              <Route path="/commerce/orders/buyer" element={<UserOrders />} />
             </Route>
 
           </Route> 
