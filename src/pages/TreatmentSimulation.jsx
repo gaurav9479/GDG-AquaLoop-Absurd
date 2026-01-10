@@ -119,15 +119,22 @@ const TreatmentSimulation = () => {
 
   useEffect(() => {
   const unsub = onAuthStateChanged(auth, (user) => {
-    console.log("Auth ready:", user);
+    console.log("🔥 AUTH STATE CHANGED");
+    console.log("LOGGED IN UID:", user?.uid);
+    console.log("LOGGED IN EMAIL:", user?.email);
   });
   return () => unsub();
 }, []);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const runSimulation = async () => {
+    console.log("🚀 RUN SIMULATION CLICKED");
+  console.log("LOGGED IN UID:", auth.currentUser?.uid);
+  console.log("LOGGED IN EMAIL:", auth.currentUser?.email);
+
     const finalIndustryLabel = industry === "manual" ? manualIndustryName : industry;
 
     if (industry === "manual" && !manualIndustryName.trim()) {
