@@ -1,9 +1,6 @@
-
-const axios = require("axios");
 const admin = require("firebase-admin");
 const { onRequest } = require("firebase-functions/v2/https");
 const ee = require("@google/earthengine");
-
 const { runGemini } = require("./geminiHelper");
 const serviceAccount = require("../service-account.json");
 
@@ -27,65 +24,53 @@ ee.data.authenticateViaPrivateKey(
 );
 
 /* =========================
-   HELPER
+   CORS HELPER
 ========================= */
-function getWaterDataNearLocation(lat, lng) {
-  return new Promise((resolve, reject) => {
-    try {
-      const point = ee.Geometry.Point([lng, lat]);
-      const dataset = ee.Image("JRC/GSW1_4/GlobalSurfaceWater");
-      const water = dataset.select("occurrence");
-
-      const stats = water.reduceRegion({
-        reducer: ee.Reducer.mean(),
-        geometry: point.buffer(5000),
-        scale: 30,
-        maxPixels: 1e9,
-      });
-
-      stats.evaluate(resolve);
-    } catch (e) {
-      reject(e);
-    }
-  });
-}
-
-exports.getWaterNearIndustry = onRequest(async (req, res) => {
+const setCors = (res) => {
   res.set("Access-Control-Allow-Origin", "*");
-  res.set("Access-Control-Allow-Headers", "Content-Type");
-  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type,Authorization");
+};
 
+/* =========================
+   WATER NEAR INDUSTRY
+========================= */
+exports.getWaterNearIndustry = onRequest(async (req, res) => {
+  setCors(res);
   if (req.method === "OPTIONS") return res.status(204).send("");
 
   try {
     if (!eeReady) {
       return res.status(503).json({
         success: false,
-        message: "Earth Engine not initialized yet, try again"
+        message: "Earth Engine not ready"
       });
     }
-
-
-    console.log("🔥 getWaterNearIndustry HIT", req.body);
 
     const { lat, lng } = req.body;
     if (!lat || !lng) {
       return res.status(400).json({ error: "lat and lng required" });
     }
 
-    const data = await getWaterDataNearLocation(lat, lng);
+    const point = ee.Geometry.Point([lng, lat]);
+    const dataset = ee.Image("JRC/GSW1_4/GlobalSurfaceWater");
+    const water = dataset.select("occurrence");
+
+    const stats = await water.reduceRegion({
+      reducer: ee.Reducer.mean(),
+      geometry: point.buffer(5000),
+      scale: 30,
+      maxPixels: 1e9,
+    }).evaluate();
 
     res.json({
       success: true,
       location: { lat, lng },
-      waterPresence: waterData?.occurrence || 0,
-      message: "Water data fetched successfully using Earth Engine"
+      waterPresence: stats?.occurrence || 0
     });
-
-  }
-  catch (err) {
-    console.error("❌ getWaterNearIndustry ERROR:", err);
-    return res.status(500).json({ success: false, error: err.message });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -93,9 +78,7 @@ exports.getWaterNearIndustry = onRequest(async (req, res) => {
    GEMINI AUDIT
 ========================= */
 exports.askGemini = onRequest(async (req, res) => {
-  res.set("Access-Control-Allow-Origin", "*");
-  res.set("Access-Control-Allow-Headers", "Content-Type");
-
+  setCors(res);
   if (req.method === "OPTIONS") return res.status(204).send("");
 
   try {
@@ -114,59 +97,23 @@ exports.askGemini = onRequest(async (req, res) => {
     });
 
     res.json({ success: true, content });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-//     const prompt = `
-// You are a water trading price expert. Predict a fair market price per KLD (kiloliters per day) for treated water based on the following parameters:
-
-// - Water Quality Grade: ${grade}
-// - Volume Available: ${volume} KLD
-// - pH Level: ${pH}
-// - TDS (Total Dissolved Solids): ${tds} mg/L
-// - BOD (Biochemical Oxygen Demand): ${bod} mg/L
-// - COD (Chemical Oxygen Demand): ${cod} mg/L
-// - Location: ${location}
-
-// Provide ONLY a single number representing the price per KLD in Indian Rupees (₹).
-//     `.trim();
-
-//     const predictedPrice = await runGemini(prompt);
-
-//     const priceMatch = predictedPrice.match(/\d+(\.\d+)?/);
-//     const price = priceMatch ? parseFloat(priceMatch[0]) : 25;
-
-//     res.status(200).json({
-//       success: true,
-//       pricePerKLD: price,
-//       totalPrice: price * volume,
-//       currency: "INR"
-//     });
-
-//   } catch (err) {
-//     console.error("Price Prediction Error:", err);
-/* ---------------- WATER PRICE PREDICTION HANDLER (NEW) ---------------- */
-
-/* ---------------- WATER PRICE PREDICTION HANDLER (NEW) ---------------- */
-
-const predictWaterPrice = async (req, res) => {
-  // ===== CORS =====
-  res.set("Access-Control-Allow-Origin", "*");
-  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.set("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === "OPTIONS") {
-    return res.status(204).send("");
-  }
+/* =========================
+   PREDICT WATER PRICE
+========================= */
+exports.predictWaterPrice = onRequest(async (req, res) => {
+  setCors(res);
+  if (req.method === "OPTIONS") return res.status(204).send("");
 
   try {
     const { grade, volume } = req.body;
 
-    const prompt = `Predict water price per KLD for grade ${grade}, volume ${volume}KLD. Only number.`;
+    const prompt = `Predict water price per KLD for grade ${grade}, volume ${volume}. Only number.`;
     const reply = await runGemini(prompt);
-
     const price = Number(reply.match(/\d+/)?.[0] || 25);
 
     res.json({
@@ -176,30 +123,20 @@ const predictWaterPrice = async (req, res) => {
       currency: "INR"
     });
   } catch (err) {
-    console.error("Price Prediction Error:", err);
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
+    res.status(500).json({ success: false, error: err.message });
   }
-};
+});
 
-/* ---------------- CREATE LISTING HANDLER (NEW) ---------------- */
-
-const createListing = async (req, res) => {
-  // ===== CORS =====
-  res.set("Access-Control-Allow-Origin", "*");
-  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.set("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === "OPTIONS") {
-    return res.status(204).send("");
-  }
+/* =========================
+   CREATE LISTING
+========================= */
+exports.createListing = onRequest(async (req, res) => {
+  setCors(res);
+  if (req.method === "OPTIONS") return res.status(204).send("");
 
   try {
     const listingData = req.body;
 
-    // Add to Firestore (assuming db is imported from firebase-admin)
     const docRef = await db.collection("water_listings").add({
       ...listingData,
       status: "available",
@@ -211,79 +148,31 @@ const createListing = async (req, res) => {
       listingId: docRef.id
     });
   } catch (err) {
-    console.error("Create Listing Error:", err);
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
   }
-};
+});
 
-/* ---------------- GET LISTINGS HANDLER (NEW) ---------------- */
-
-const getListings = async (req, res) => {
-  // ===== CORS =====
-  res.set("Access-Control-Allow-Origin", "*");
-  res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.set("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === "OPTIONS") {
-    return res.status(204).send("");
-  }
+/* =========================
+   GET LISTINGS
+========================= */
+exports.getListings = onRequest(async (req, res) => {
+  setCors(res);
+  if (req.method === "OPTIONS") return res.status(204).send("");
 
   try {
-    const snapshot = await db.collection("water_listings")
+    const snapshot = await db
+      .collection("water_listings")
       .where("status", "==", "available")
       .orderBy("createdAt", "desc")
       .get();
 
-    const listings = [];
-    snapshot.forEach(doc => {
-      listings.push({ id: doc.id, ...doc.data() });
-    });
+    const listings = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    res.status(200).json({
-      success: true,
-      listings
-    });
+    res.json({ success: true, listings });
   } catch (err) {
-    console.error("Get Listings Error:", err);
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
+    res.status(500).json({ success: false, error: err.message });
   }
-};
-
-/* ---------------- EXPORT ALL ---------------- */
-
-module.exports = {
-  askGemini,
-  getWaterNearIndustry,
-  predictWaterPrice,
-  createListing,
-  getListings,
-};
-    
-
-/* =========================
-   LISTINGS
-exports.createListing = onRequest(async (req, res) => {
-  const doc = await db.collection("water_listings").add({
-    ...req.body,
-    status: "available",
-    createdAt: new Date().toISOString(),
-  });
-
-  res.json({ success: true, id: doc.id });
 });
 
-exports.getListings = onRequest(async (req, res) => {
-  const snap = await db.collection("water_listings")
-    .where("status", "==", "available")
-    .get();
 
-  res.json({
-    listings: snap.docs.map(d => ({ id: d.id, ...d.data() }))
-  });
-});*/
